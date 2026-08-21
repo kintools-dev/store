@@ -1,7 +1,8 @@
 /**
  * Builds an npm-compatible package for one @kintools/store-* workspace
- * member, using dnt to transpile its Deno/TypeScript source into a hybrid
- * ESM+CJS npm package. Run from the repo root:
+ * member, using dnt to transpile its Deno/TypeScript source into an
+ * ESM-only npm package (no CommonJS build; see `scriptModule: false`
+ * below). Run from the repo root:
  *
  *   deno task --cwd scripts build-npm core
  *
@@ -53,6 +54,7 @@ await build({
   shims: {},
   test: false,
   typeCheck: false,
+  scriptModule: false,
   mappings: MAPPINGS[pkg],
   compilerOptions: JSX_PACKAGES.has(pkg)
     ? { jsx: "react-jsx", jsxImportSource: "react" }
