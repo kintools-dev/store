@@ -51,6 +51,9 @@ deno lint
 
 # Bundle-size check for core primitives and the react package
 deno task --cwd scripts bundle-size
+
+# Speed benchmark: @kintools/store-react vs Zustand/Redux Toolkit/Jotai/MobX
+deno task --cwd scripts speed-bench
 ```
 
 `docs/` has no dev/build tasks of its own; it's rendered by the kintools.dev

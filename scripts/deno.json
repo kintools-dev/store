@@ -1,17 +1,29 @@
 {
   "tasks": {
     "bundle-size": "deno run -A bundle-size.ts",
+    "speed-bench": "deno run -A speed-bench.ts",
     "build-npm": "deno run -A build-npm.ts"
   },
   "imports": {
     "@deno/dnt": "jsr:@deno/dnt@^0.43.2",
     "rolldown": "npm:rolldown@^1",
     "react": "npm:react@^19.2.7",
+    "react-dom": "npm:react-dom@^19.2.7",
+    "@types/react": "npm:@types/react@^19.2.17",
+    "@testing-library/react": "npm:@testing-library/react@^16.3.0",
+    "happy-dom": "npm:happy-dom@^20.10.6",
     "zustand": "npm:zustand@^5",
     "@reduxjs/toolkit": "npm:@reduxjs/toolkit@^2",
     "react-redux": "npm:react-redux@^9",
     "jotai": "npm:jotai@^2",
+    "jotai-family": "npm:jotai-family@^1",
     "mobx": "npm:mobx@^7",
     "mobx-react-lite": "npm:mobx-react-lite@^5"
+  },
+  "compilerOptions": {
+    "types": ["@types/react"],
+    "lib": ["dom", "dom.iterable", "deno.ns"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
   }
 }
