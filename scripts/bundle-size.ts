@@ -74,7 +74,7 @@ const entries: Entry[] = [
   {
     // The number to set against the comparison libraries below: core +
     // react bindings together, "react" itself externalized the same way.
-    name: "@kin-store (core + react)",
+    name: "Kin Store (core + react)",
     input: REACT_ENTRY,
     external: ["react"],
   },

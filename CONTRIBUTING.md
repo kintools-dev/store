@@ -34,7 +34,7 @@ deno lint                               # lint the workspace
 ## Code conventions
 
 - Public API is exported only through each package's `index.ts`. Import other
-  packages' public APIs through their `@kin-store/<pkg>` specifier, not by
+  packages' public APIs through their `@kintools/store-<pkg>` specifier, not by
   reaching into internal files.
 - Internal, non-exported helpers live in `_internals.ts` / `_types.ts`.
 - Commit subjects follow `type(scope): summary` (e.g. `fix(core): ...`,

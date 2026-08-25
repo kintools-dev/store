@@ -184,9 +184,9 @@ doesn't itself subscribe to state the way `useStore` does.
 - Internal/non-exported helpers live in `_internals.ts` / `_types.ts`
   (underscore prefix signals "not part of the public API").
 - Public API surface is exported only via each package's `index.ts`, mapped to
-  the bare `@kin-store/<pkg>` specifier by that package's `deno.json` `exports`
-  map (a `./index.ts` deep path also still resolves, for back-compat). Import
-  other packages' public APIs through that specifier (e.g.
+  the bare `@kintools/store-<pkg>` specifier by that package's `deno.json`
+  `exports` map (a `./index.ts` deep path also still resolves, for back-compat).
+  Import other packages' public APIs through that specifier (e.g.
   `@kintools/store-core`), not by reaching into internal files.
 - JSDoc on exported symbols is extensive and treated as user-facing
   documentation (it feeds the JSR package page) — `@example`, `@template`, and

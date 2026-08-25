@@ -1,5 +1,5 @@
 {
-  "name": "@kin-store/example-nextjs-todo",
+  "name": "@kintools/store-example-nextjs-todo",
   "private": true,
   "scripts": {
     "dev": "next dev --port=3333",

@@ -1,6 +1,6 @@
 # Kin Store
 
-[![JSR @kin-store](https://jsr.io/badges/@kin-store)](https://jsr.io/@kin-store)
+[![JSR @kintools/store-core](https://jsr.io/badges/@kintools/store-core)](https://jsr.io/@kintools/store-core)
 ![License: MIT](https://img.shields.io/badge/License-MIT-166534?style=flat)
 ![Framework-agnostic](https://img.shields.io/badge/Framework--agnostic-166534?style=flat)
 ![Tiny footprint](https://img.shields.io/badge/Tiny%20footprint-166534?style=flat)
