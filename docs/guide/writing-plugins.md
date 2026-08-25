@@ -75,14 +75,14 @@ const store = withPlugins({ count: 0 }).use({
 });
 ```
 
-::: warning Avoid patching the store object
+<Container type="warning" title="Avoid patching the store object">
 
 `onActivated`, `onDestroy`, and `methods` all receive the full store API, but
 avoid mutating or monkey-patching the store object itself. Declare capabilities
 through `methods` and `reducers` instead — that keeps plugin contracts explicit
 and collision-detectable.
 
-:::
+</Container>
 
 ## Dispatching from methods
 

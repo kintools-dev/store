@@ -9,7 +9,7 @@ the _client_ owns (cart contents, current step, draft promo code), TanStack
 Query holds what the _server_ owns (catalog, stock, computed pricing, order
 history). This variant keeps the client half as one `withPlugins` store with
 reducers; see
-[TanStack Query and Primitive Stores](/examples/tanstack-query-primitive-stores)
+[TanStack Query and Primitive Stores](/store/examples/tanstack-query-primitive-stores)
 for the same app built the other way, one `createStore` per field. Full source
 in
 [`examples/checkout-redux-style-react-query`](https://github.com/kintools-dev/store/tree/main/examples/checkout-redux-style-react-query).
@@ -88,8 +88,9 @@ export const checkoutStore = withPlugins(initialState)
 Nothing here is server data — no product list, no stock counts, no computed
 totals. Just the cart the shopper is building and where they are in the flow,
 all in one place. It's a plain module-level singleton (a client-only SPA has no
-per-request isolation concern, unlike the [Next.js example](/examples/nextjs)),
-and `persist` means an abandoned cart is still there if they come back later.
+per-request isolation concern, unlike the
+[Next.js example](/store/examples/nextjs)), and `persist` means an abandoned
+cart is still there if they come back later.
 
 ## Feeding a store selection into a query key
 

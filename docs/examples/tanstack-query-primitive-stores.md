@@ -5,8 +5,8 @@ description: "The same TanStack Query checkout flow, built with one createStore 
 # TanStack Query and Primitive Stores
 
 The same checkout flow as
-[TanStack Query and One Fat Store](/examples/tanstack-query-fat-store), built
-the other way: instead of one `withPlugins` store holding the whole client
+[TanStack Query and One Fat Store](/store/examples/tanstack-query-fat-store),
+built the other way: instead of one `withPlugins` store holding the whole client
 state, each field gets its own `createStore`, and a `derive` store merges them
 for persistence. Kin Store still holds what the _client_ owns (cart contents,
 current step, draft promo code); TanStack Query still holds what the _server_

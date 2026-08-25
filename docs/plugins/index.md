@@ -8,35 +8,47 @@ Official plugins for `@kintools/store-core`, published as
 `@kintools/store-plugins`.
 
 To learn how to write your own plugin, see
-[Writing Plugins](/guide/writing-plugins).
+[Writing Plugins](/store/guide/writing-plugins).
 
 ## Install
 
-::: code-group
+<CodeGroup>
 
-```sh [npm]
+<CodeGroupItem label="npm">
+
+```sh
 npm add @kintools/store-plugins
 ```
 
-```sh [pnpm]
+</CodeGroupItem>
+
+<CodeGroupItem label="pnpm">
+
+```sh
 pnpm add @kintools/store-plugins
 ```
 
-```sh [deno]
+</CodeGroupItem>
+
+<CodeGroupItem label="deno">
+
+```sh
 deno add jsr:@kintools/store-plugins
 ```
 
-:::
+</CodeGroupItem>
+
+</CodeGroup>
 
 ## Available plugins
 
-| Plugin                            | Description                                                  |
-| --------------------------------- | ------------------------------------------------------------ |
-| [`broadcast`](/plugins/broadcast) | Syncs state across browser tabs with `BroadcastChannel`      |
-| [`devtools`](/plugins/devtools)   | Connects to the Redux DevTools Extension                     |
-| [`history`](/plugins/history)     | Undo / redo / reset with snapshot history                    |
-| [`immer`](/plugins/immer)         | Writes reducers or `set`'s updaters as Immer draft mutations |
-| [`persist`](/plugins/persist)     | Persists state to localStorage (or any custom storage)       |
+| Plugin                                  | Description                                                  |
+| --------------------------------------- | ------------------------------------------------------------ |
+| [`broadcast`](/store/plugins/broadcast) | Syncs state across browser tabs with `BroadcastChannel`      |
+| [`devtools`](/store/plugins/devtools)   | Connects to the Redux DevTools Extension                     |
+| [`history`](/store/plugins/history)     | Undo / redo / reset with snapshot history                    |
+| [`immer`](/store/plugins/immer)         | Writes reducers or `set`'s updaters as Immer draft mutations |
+| [`persist`](/store/plugins/persist)     | Persists state to localStorage (or any custom storage)       |
 
 ## Usage pattern
 

@@ -187,5 +187,5 @@ export function TodoList() {
 
 `useStoreContext<TodoStore>()` is what makes the store type-safe here, since
 there's no module-level export to import a type from directly. See
-[`StoreProvider` and `useStoreContext`](/react/#storeprovider-and-usestorecontext)
+[`StoreProvider` and `useStoreContext`](/store/react/#storeprovider-and-usestorecontext)
 for the general pattern.

@@ -77,9 +77,10 @@ unsubscribe();
 ```
 
 The listener receives `get` (a getter, not the value itself) and `prevState`
-(the state before the change). Using a getter allows [`derive`](/guide/derive)
-to stay lazy: a derived store defers recomputation until something actually
-calls its `get()`, instead of recomputing eagerly on every upstream change.
+(the state before the change). Using a getter allows
+[`derive`](/store/guide/derive) to stay lazy: a derived store defers
+recomputation until something actually calls its `get()`, instead of recomputing
+eagerly on every upstream change.
 
 ## `listenerWithSelector`
 
@@ -111,4 +112,4 @@ store.set({ count: 1, name: "Bob" }); // no log — count didn't change
 - You're building a library or utility on top of Kin Store
 
 When you need methods colocated with the store, a dispatch pipeline, or
-middleware, reach for [`withPlugins`](/guide/with-plugins).
+middleware, reach for [`withPlugins`](/store/guide/with-plugins).

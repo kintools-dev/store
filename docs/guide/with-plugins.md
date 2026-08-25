@@ -198,8 +198,8 @@ If your team standardizes on one style — e.g. "every mutation goes through
 `dispatch.*`" — hold that convention at your store module's boundary (export
 `dispatch` and your methods, not `set`) rather than expecting the library to
 block direct `set` calls; see
-[Two tiers of mutation](./design-principles.md#two-tiers-of-mutation) in Design
-Principles for the full reasoning.
+[Two tiers of mutation](/store/guide/design-principles#two-tiers-of-mutation) in
+Design Principles for the full reasoning.
 
 ## Canceling a dispatch
 

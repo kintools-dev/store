@@ -1,0 +1,84 @@
+{
+  "title": "Kin Store",
+  "description": "A reactive state library for TypeScript. Framework-agnostic, zero dependencies, 100% type-safe.",
+  "nav": [
+    { "text": "Guide", "link": "/guide/" },
+    { "text": "Plugins", "link": "/plugins/" },
+    { "text": "React", "link": "/react/" },
+    { "text": "Examples", "link": "/examples/" },
+    { "text": "Comparison", "link": "/comparison/" },
+    { "text": "API Reference", "link": "https://jsr.io/@kintools/store-core" }
+  ],
+  "sidebar": {
+    "/guide/": [
+      {
+        "text": "Introduction",
+        "items": [
+          { "text": "Why Kin Store?", "link": "/guide/" },
+          { "text": "Getting Started", "link": "/guide/getting-started" },
+          { "text": "Design Principles", "link": "/guide/design-principles" },
+          { "text": "FAQ & Non-Goals", "link": "/guide/faq" }
+        ]
+      },
+      {
+        "text": "Core",
+        "items": [
+          { "text": "createStore", "link": "/guide/create-store" },
+          { "text": "withPlugins", "link": "/guide/with-plugins" },
+          { "text": "derive", "link": "/guide/derive" },
+          { "text": "Writing Plugins", "link": "/guide/writing-plugins" }
+        ]
+      }
+    ],
+    "/comparison/": [
+      {
+        "text": "Comparison",
+        "items": [{ "text": "Overview", "link": "/comparison/" }]
+      }
+    ],
+    "/plugins/": [
+      {
+        "text": "Official Plugins",
+        "items": [
+          { "text": "Overview", "link": "/plugins/" },
+          { "text": "broadcast", "link": "/plugins/broadcast" },
+          { "text": "devtools", "link": "/plugins/devtools" },
+          { "text": "history", "link": "/plugins/history" },
+          { "text": "immer", "link": "/plugins/immer" },
+          { "text": "persist", "link": "/plugins/persist" }
+        ]
+      }
+    ],
+    "/react/": [
+      {
+        "text": "React",
+        "items": [{ "text": "Overview", "link": "/react/" }]
+      }
+    ],
+    "/examples/": [
+      {
+        "text": "Guided Examples",
+        "items": [
+          { "text": "Overview", "link": "/examples/" },
+          { "text": "Next.js", "link": "/examples/nextjs" },
+          {
+            "text": "TanStack Query + Fat Store",
+            "link": "/examples/tanstack-query-fat-store"
+          },
+          {
+            "text": "TanStack Query + Primitive Stores",
+            "link": "/examples/tanstack-query-primitive-stores"
+          },
+          { "text": "Cross-Tab Sync", "link": "/examples/cross-tab-sync" }
+        ]
+      }
+    ]
+  },
+  "socialLinks": [
+    { "icon": "github", "link": "https://github.com/kintools-dev/store" }
+  ],
+  "editLink": {
+    "pattern": "https://github.com/kintools-dev/store/edit/main/docs/:path",
+    "text": "Edit this page on GitHub"
+  }
+}

@@ -15,17 +15,20 @@ plus docs and examples.
   `history`, `immer`, `devtools`.
 - `@kintools/store-react` (`react/`) — `useStore`, `useSelector`,
   `StoreProvider`/`useStoreContext`.
-- `docs/` — VitePress site (kinstore.dev): guides, plugin docs, comparison page.
+- `docs/` — documentation content (Markdown + images): guides, plugin docs,
+  comparison page. No site tooling lives here; kintools.dev reads this folder at
+  build time and renders it.
 - `examples/` — standalone Vite apps demonstrating usage (`simple`,
   `better-redux`, `nextjs-todo`) plus `code-snippets.local/` (untracked scratch
   snippets used while writing docs, not part of any workspace build).
 
 This is a Deno project (`deno.json` at root defines the workspace: `core`,
-`plugins`, `react`, `examples/*`, `docs`, `scripts`). Node/npm dependencies
-(React, immer, vitepress, etc.) are consumed via `npm:` specifiers and resolved
-into `node_modules` (`nodeModulesDir: auto`); a package must be a workspace
-member for its `npm:` specifiers to resolve this way, which is why `scripts` is
-listed despite keeping its own `deno.json` for task/import isolation.
+`plugins`, `react`, `examples/*`, `scripts`). `docs/` is plain content, not a
+workspace member (it has no `deno.json` of its own). Node/npm dependencies
+(React, immer, etc.) are consumed via `npm:` specifiers and resolved into
+`node_modules` (`nodeModulesDir: auto`); a package must be a workspace member
+for its `npm:` specifiers to resolve this way, which is why `scripts` is listed
+despite keeping its own `deno.json` for task/import isolation.
 
 ## Commands
 
@@ -48,12 +51,10 @@ deno lint
 
 # Bundle-size check for core primitives and the react package
 deno task --cwd scripts bundle-size
-
-# Docs site (VitePress)
-cd docs && deno task dev       # dev server
-cd docs && deno task build
-cd docs && deno task preview
 ```
+
+`docs/` has no dev/build tasks of its own; it's rendered by the kintools.dev
+site (a separate repo), which reads this folder at build time.
 
 There is no separate typecheck task — `deno test`/`deno lint` surface type
 errors as part of Deno's normal compilation.

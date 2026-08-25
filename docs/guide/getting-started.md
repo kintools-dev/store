@@ -8,69 +8,117 @@ description: "Install @kintools/store-core, @kintools/store-react, or @kintools/
 
 For vanilla projects:
 
-::: code-group
+<CodeGroup>
 
-```sh [npm]
+<CodeGroupItem label="npm">
+
+```sh
 npm add @kintools/store-core
 ```
 
-```sh [pnpm]
+</CodeGroupItem>
+
+<CodeGroupItem label="pnpm">
+
+```sh
 pnpm add @kintools/store-core
 ```
 
-```sh [yarn]
+</CodeGroupItem>
+
+<CodeGroupItem label="yarn">
+
+```sh
 yarn add @kintools/store-core
 ```
 
-```sh [deno]
+</CodeGroupItem>
+
+<CodeGroupItem label="deno">
+
+```sh
 deno add jsr:@kintools/store-core
 ```
 
-:::
+</CodeGroupItem>
+
+</CodeGroup>
 
 For React projects (`@kintools/store-core` is included):
 
-::: code-group
+<CodeGroup>
 
-```sh [npm]
+<CodeGroupItem label="npm">
+
+```sh
 npm add @kintools/store-react
 ```
 
-```sh [pnpm]
+</CodeGroupItem>
+
+<CodeGroupItem label="pnpm">
+
+```sh
 pnpm add @kintools/store-react
 ```
 
-```sh [yarn]
+</CodeGroupItem>
+
+<CodeGroupItem label="yarn">
+
+```sh
 yarn add @kintools/store-react
 ```
 
-```sh [deno]
+</CodeGroupItem>
+
+<CodeGroupItem label="deno">
+
+```sh
 deno add jsr:@kintools/store-react
 ```
 
-:::
+</CodeGroupItem>
+
+</CodeGroup>
 
 To add official plugins:
 
-::: code-group
+<CodeGroup>
 
-```sh [npm]
+<CodeGroupItem label="npm">
+
+```sh
 npm add @kintools/store-plugins
 ```
 
-```sh [pnpm]
+</CodeGroupItem>
+
+<CodeGroupItem label="pnpm">
+
+```sh
 pnpm add @kintools/store-plugins
 ```
 
-```sh [yarn]
+</CodeGroupItem>
+
+<CodeGroupItem label="yarn">
+
+```sh
 yarn add @kintools/store-plugins
 ```
 
-```sh [deno]
+</CodeGroupItem>
+
+<CodeGroupItem label="deno">
+
+```sh
 deno add jsr:@kintools/store-plugins
 ```
 
-:::
+</CodeGroupItem>
+
+</CodeGroup>
 
 ## Quick start
 
@@ -118,7 +166,8 @@ Each `.use()` adds capability, not a nesting level. The store grows with you.
 
 ## What's next
 
-- [createStore](/guide/create-store) — the minimal foundation
-- [withPlugins](/guide/with-plugins) — add methods, reducers, and middleware
-- [derive](/guide/derive) — compose stores reactively
-- [Plugins](/plugins/) — persist, history, immer
+- [createStore](/store/guide/create-store) — the minimal foundation
+- [withPlugins](/store/guide/with-plugins) — add methods, reducers, and
+  middleware
+- [derive](/store/guide/derive) — compose stores reactively
+- [Plugins](/store/plugins/) — persist, history, immer

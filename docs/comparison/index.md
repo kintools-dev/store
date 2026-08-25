@@ -10,7 +10,7 @@ implemented in each library. Full, working setup in every example.
 
 ## Feature matrix
 
-<FeatureMatrix :full="true" />
+<FeatureMatrix full={true} />
 
 ## vs Redux / RTK
 
@@ -22,9 +22,11 @@ to flow through call sites.
 
 <SideBySide>
 
-::: code-group
+<CodeGroup>
 
-```ts [Kin Store]
+<CodeGroupItem label="Kin Store">
+
+```ts
 import { withPlugins } from "@kintools/store-core";
 
 type Todo = { id: number; text: string; done: boolean };
@@ -65,7 +67,11 @@ todoStore.dispatch.addTodo("Buy groceries");
 await todoStore.fetchTodos();
 ```
 
-```ts [Redux / RTK]
+</CodeGroupItem>
+
+<CodeGroupItem label="Redux / RTK">
+
+```ts
 import {
   configureStore,
   createAsyncThunk,
@@ -126,7 +132,9 @@ store.dispatch(todosSlice.actions.addTodo("Buy groceries"));
 store.dispatch(fetchTodos()); // Returns a thunk, not a plain action.
 ```
 
-:::
+</CodeGroupItem>
+
+</CodeGroup>
 
 </SideBySide>
 
@@ -143,7 +151,7 @@ store.dispatch(fetchTodos()); // Returns a thunk, not a plain action.
 Redux-Saga's `takeLatest` sequences and cancels concurrent calls to the same
 action for you; Kin Store's `methods` don't, the same tradeoff Zustand makes.
 See
-[Guarding against race conditions](/guide/with-plugins#guarding-against-race-conditions)
+[Guarding against race conditions](/store/guide/with-plugins#guarding-against-race-conditions)
 for the manual pattern.
 
 ### Writing extensions
@@ -158,9 +166,11 @@ time and throws on conflict.
 
 <SideBySide>
 
-::: code-group
+<CodeGroup>
 
-```ts [Kin Store plugin]
+<CodeGroupItem label="Kin Store plugin">
+
+```ts
 import { getPluginDispatch } from "@kintools/store-core";
 import type {
   InferActions,
@@ -241,7 +251,11 @@ export function history<
 }
 ```
 
-```ts [Redux enhancer]
+</CodeGroupItem>
+
+<CodeGroupItem label="Redux enhancer">
+
+```ts
 import { configureStore } from "@reduxjs/toolkit";
 import type { StoreEnhancer } from "@reduxjs/toolkit";
 
@@ -320,18 +334,20 @@ const store = configureStore({
 store.history.undo(); // ✓ — snapshots are TState[], but required manual inference and casts
 ```
 
-:::
+</CodeGroupItem>
+
+</CodeGroup>
 
 </SideBySide>
 
-::: warning
+<Container type="warning">
 
 Kin Store plugins have full access to the store from `onActivated`, `onDestroy`,
 and `methods` — but patching the store object itself is discouraged. Declare
 capabilities through `methods` and `reducers` instead; the plugin system is
 designed around those.
 
-:::
+</Container>
 
 ## vs Zustand
 
@@ -352,9 +368,11 @@ depends on composition order.
 
 <SideBySide>
 
-::: code-group
+<CodeGroup>
 
-```ts [Kin Store]
+<CodeGroupItem label="Kin Store">
+
+```ts
 import { history, immer, persist } from "@kintools/store-plugins";
 import { useSelector, withPlugins } from "@kintools/store-react";
 
@@ -406,7 +424,11 @@ function TodoApp() {
 }
 ```
 
-```ts [Zustand]
+</CodeGroupItem>
+
+<CodeGroupItem label="Zustand">
+
+```ts
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
@@ -468,7 +490,9 @@ function TodoApp() {
 }
 ```
 
-:::
+</CodeGroupItem>
+
+</CodeGroup>
 
 </SideBySide>
 
@@ -500,9 +524,11 @@ Zustand middleware uses.
 
 <SideBySide>
 
-::: code-group
+<CodeGroup>
 
-```ts [Kin Store plugin]
+<CodeGroupItem label="Kin Store plugin">
+
+```ts
 import { getPluginDispatch } from "@kintools/store-core";
 import type {
   InferActions,
@@ -584,7 +610,11 @@ export function history<
 }
 ```
 
-```ts [Zustand middleware]
+</CodeGroupItem>
+
+<CodeGroupItem label="Zustand middleware">
+
+```ts
 import { StateCreator, StoreMutatorIdentifier } from "zustand";
 
 type Write<T, U> = Omit<T, keyof U> & U;
@@ -668,7 +698,9 @@ const historyImpl: HistoryImpl = (fn) => (set, get, api) => {
 export const history = historyImpl as unknown as History;
 ```
 
-:::
+</CodeGroupItem>
+
+</CodeGroup>
 
 </SideBySide>
 
@@ -681,14 +713,14 @@ export const history = historyImpl as unknown as History;
 | Restore state  | `_restore` reducer — full pipeline | `api.setState(saved, true)` — bypasses all middlewares  |
 | Name collision | Throws at registration time        | Silent overwrite                                        |
 
-::: warning
+<Container type="warning">
 
 Kin Store plugins have full access to the store from `onActivated`, `onDestroy`,
 and `methods` — but patching the store object itself is discouraged. Declare
 capabilities through `methods` and `reducers` instead; the plugin system is
 designed around those.
 
-:::
+</Container>
 
 ## vs Jotai
 
@@ -708,9 +740,11 @@ atoms can be hard to follow in a debugger.
 
 <SideBySide>
 
-::: code-group
+<CodeGroup>
 
-```ts [Kin Store]
+<CodeGroupItem label="Kin Store">
+
+```ts
 import { createStore, useStore } from "@kintools/store-react";
 
 type Todo = { id: number; text: string; done: boolean };
@@ -746,7 +780,11 @@ function TodoApp() {
 }
 ```
 
-```ts [Jotai]
+</CodeGroupItem>
+
+<CodeGroupItem label="Jotai">
+
+```ts
 import { atom, useAtomValue, useSetAtom } from "jotai";
 
 type Todo = { id: number; text: string; done: boolean };
@@ -783,7 +821,9 @@ function TodoApp() {
 }
 ```
 
-:::
+</CodeGroupItem>
+
+</CodeGroup>
 
 </SideBySide>
 
@@ -813,9 +853,11 @@ Redux/RTK.
 
 <SideBySide>
 
-::: code-group
+<CodeGroup>
 
-```ts [Kin Store]
+<CodeGroupItem label="Kin Store">
+
+```ts
 import { useSelector, withPlugins } from "@kintools/store-react";
 
 type Todo = { id: number; text: string; done: boolean };
@@ -856,7 +898,11 @@ function TodoApp() {
 }
 ```
 
-```ts [MobX]
+</CodeGroupItem>
+
+<CodeGroupItem label="MobX">
+
+```ts
 import { makeAutoObservable, runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 
@@ -906,7 +952,9 @@ const TodoApp = observer(() => {
 });
 ```
 
-:::
+</CodeGroupItem>
+
+</CodeGroup>
 
 </SideBySide>
 

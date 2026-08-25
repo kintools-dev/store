@@ -32,15 +32,16 @@ in the meantime.
 
 ### Does it work with SSR / Next.js?
 
-See the [Next.js example](/examples/nextjs). SSR mainly changes two things:
-where the store instance lives (constructed per-request or via a provider, not a
-module-level singleton shared across requests) and when `persist` is allowed to
-touch `localStorage` (skipped on the server, hydrated explicitly on the client).
+See the [Next.js example](/store/examples/nextjs). SSR mainly changes two
+things: where the store instance lives (constructed per-request or via a
+provider, not a module-level singleton shared across requests) and when
+`persist` is allowed to touch `localStorage` (skipped on the server, hydrated
+explicitly on the client).
 
 ### Is there a DevTools integration?
 
-The official [`devtools`](/plugins/devtools) plugin connects a store to the
-Redux DevTools Extension for time-travel debugging, action replay, and
+The official [`devtools`](/store/plugins/devtools) plugin connects a store to
+the Redux DevTools Extension for time-travel debugging, action replay, and
 jump-to-state. It's opt-in like every other plugin; a store that never registers
 it carries no devtools code.
 
@@ -57,8 +58,8 @@ reducer itself.
 It doesn't, on purpose. `createStore`/`withPlugins` model state your client
 owns; server-owned data (cached responses, request dedup, background refetch) is
 TanStack Query's job, not Kin Store's. See the
-[TanStack Query examples](/examples/) for two ways to split the two: client
-state as one `withPlugins` store, or one `createStore` per field.
+[TanStack Query examples](/store/examples/) for two ways to split the two:
+client state as one `withPlugins` store, or one `createStore` per field.
 
 ### Does `persist` or `broadcast` handle conflict resolution for concurrent edits?
 
@@ -88,8 +89,8 @@ Kin Store has no request cache, no dedup, no background refetch; server state
 
 State changes only through `set` or a dispatched reducer. Nothing mutates a
 draft behind your back unless you explicitly opt into the
-[`immer`](/plugins/immer) plugin, so there's no implicit, proxy-based reactivity
-happening anywhere by default.
+[`immer`](/store/plugins/immer) plugin, so there's no implicit, proxy-based
+reactivity happening anywhere by default.
 
 It's also not a schema-validation library: state shape is whatever TypeScript
 type you give `createStore`, and validating external input (an API response, a
@@ -105,5 +106,5 @@ that genuinely needs merged concurrent edits.
 
 Finally, Kin Store isn't trying to out-feature Redux. There's no built-in
 serializable action log format, no time-travel outside the `devtools` plugin,
-and no code-generation step. The [comparison page](/comparison/) covers those
-tradeoffs directly.
+and no code-generation step. The [comparison page](/store/comparison/) covers
+those tradeoffs directly.

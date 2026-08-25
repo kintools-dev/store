@@ -62,13 +62,13 @@ A `BroadcastChannel` object never receives its own posted messages, the same
 origin-tab exclusion the `storage` event has, so this needs no reentrancy guard
 either: `postMessage` here only ever reaches _other_ tabs' channels.
 
-::: warning
+<Container type="warning">
 
 Both approaches only reach tabs that are already open when the message is sent.
 A tab opened later still starts with the correct value, because that comes from
 `persist`'s normal hydration on startup, not from a signal it never saw.
 
-:::
+</Container>
 
 ## Without persist
 
@@ -78,7 +78,7 @@ doesn't use `persist` at all has no storage to re-read, but its state can be
 broadcast directly instead, the way jotai's `atomWithBroadcast` does it: post
 the new state on every change, and apply whatever arrives.
 
-That's exactly what the [`broadcast`](/plugins/broadcast) plugin does:
+That's exactly what the [`broadcast`](/store/plugins/broadcast) plugin does:
 
 ```ts
 import { withPlugins } from "@kintools/store-core";

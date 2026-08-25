@@ -101,4 +101,4 @@ function Summary() {
 }
 ```
 
-See the [React](/react/) section for full bindings documentation.
+See the [React](/store/react/) section for full bindings documentation.

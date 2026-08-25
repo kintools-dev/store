@@ -5,11 +5,11 @@ description: "The broadcast plugin syncs a store's entire state across browser t
 # broadcast
 
 Syncs a store's entire state across browser tabs using `BroadcastChannel`.
-Unlike [`persist`](/plugins/persist), it never touches storage: every change is
-broadcast to other tabs directly, and applying one back travels through the
-reducer pipeline via an internal `_apply` reducer so middlewares can observe it.
-A tab opened after others requests the current state on activation, so it
-doesn't have to wait for the next change to catch up.
+Unlike [`persist`](/store/plugins/persist), it never touches storage: every
+change is broadcast to other tabs directly, and applying one back travels
+through the reducer pipeline via an internal `_apply` reducer so middlewares can
+observe it. A tab opened after others requests the current state on activation,
+so it doesn't have to wait for the next change to catch up.
 
 ## Basic usage
 

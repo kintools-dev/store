@@ -8,24 +8,36 @@ React bindings for `@kintools/store-core`.
 
 ## Install
 
-::: code-group
+<CodeGroup>
 
-```sh [npm]
+<CodeGroupItem label="npm">
+
+```sh
 npm add @kintools/store-react
 ```
 
-```sh [pnpm]
+</CodeGroupItem>
+
+<CodeGroupItem label="pnpm">
+
+```sh
 pnpm add @kintools/store-react
 ```
 
-```sh [deno]
+</CodeGroupItem>
+
+<CodeGroupItem label="deno">
+
+```sh
 deno add jsr:@kintools/store-react
 ```
+
+</CodeGroupItem>
 
 `@kintools/store-react` depends on and re-exports everything from
 `@kintools/store-core`, so no need to install it separately.
 
-:::
+</CodeGroup>
 
 ## `useStore`
 

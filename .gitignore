@@ -17,10 +17,6 @@ dist-ssr
 # Local engineering backlog; ROADMAP.md is the public-facing equivalent.
 TODO.md
 
-# VitePress
-docs/.vitepress/dist
-docs/.vitepress/cache
-docs/.vitepress/.temp
 
 # npm build output (dnt)
 core/npm
