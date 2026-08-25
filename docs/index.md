@@ -106,8 +106,10 @@ count.set((n) => n + 1); // logs "1 -> 2"
 <br/>
 
 <Lede step="03">Compose</Lede>
-<Prose> `derive` automatically tracks dependencies without requiring a complex
-reactive graph runtime, thanks to the explict `get(store)` calls.
+
+<Prose>
+`derive` automatically tracks dependencies without requiring a complex
+reactive graph runtime, thanks to the explicit `get(store)` calls.
 </Prose>
 
 ```ts
