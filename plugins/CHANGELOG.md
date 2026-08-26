@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+- Renamed from `@kin-store/plugins` to `@kintools/store-plugins`. Now also
+  published to npm, with the npm package marked `sideEffects: false` so
+  bundlers can safely tree-shake unused exports.
+
 ## 0.4.0
 
 - Add `broadcast`, a plugin that syncs a store's entire state across browser

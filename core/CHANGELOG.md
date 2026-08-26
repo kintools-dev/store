@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1
+
+- Renamed from `@kin-store/core` to `@kintools/store-core`, matching Kin
+  Form's `@kintools/<project>-<thing>` scheme. Now also published to npm
+  (via `scripts/build-npm.ts`, using dnt), with the npm package marked
+  `sideEffects: false` so bundlers can safely tree-shake unused exports.
+- Refreshed README bundle-size figures using a rolldown-based measurement
+  (`scripts/bundle-size.ts`) and realigned the README's positioning and step
+  order with the docs site.
+
 ## 0.3.0
 
 - **Breaking:** `MergeReducers` is no longer exported. It was only ever needed

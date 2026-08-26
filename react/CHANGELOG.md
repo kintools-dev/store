@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2
+
+- Renamed from `@kin-store/react` to `@kintools/store-react`, and the repo
+  moved to `kintools-dev/store`. Now also published to npm (via
+  `scripts/build-npm.ts`, using dnt), with the npm package marked
+  `sideEffects: false` so bundlers can safely tree-shake unused exports.
+
 ## 0.3.1
 
 - Rename `useSelector`'s "slice" terminology to "selected value" throughout
