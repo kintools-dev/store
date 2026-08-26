@@ -71,6 +71,7 @@ await build({
     },
     bugs: { url: "https://github.com/kintools-dev/store/issues" },
     homepage: "https://kintools.dev/store",
+    sideEffects: false,
   },
   postBuild() {
     Deno.copyFileSync("../LICENSE", `${outDir}/LICENSE`);
