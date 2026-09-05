@@ -1,6 +1,6 @@
 {
   "title": "Kin Store",
-  "description": "A reactive state library for TypeScript. Framework-agnostic, zero dependencies, 100% type-safe.",
+  "description": "Tiny, fast, framework-agnostic reactive state library for TypeScript. Zero dependencies, 100% type-safe, with React bindings built in.",
   "nav": [
     { "text": "Guide", "link": "/guide/" },
     { "text": "Plugins", "link": "/plugins/" },
