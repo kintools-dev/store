@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3
+
+- Fix the npm build: it inlined a full copy of `@kintools/store-core`'s source
+  into the package instead of depending on the published one. The npm package
+  now lists `@kintools/store-core` as a dependency. JSR is unaffected.
+
 ## 0.3.2
 
 - Renamed from `@kin-store/react` to `@kintools/store-react`, and the repo

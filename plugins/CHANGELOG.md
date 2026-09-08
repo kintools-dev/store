@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2
+
+- Fix the npm build: it inlined a full copy of `@kintools/store-core`'s source
+  into the package instead of depending on the published one. The npm package
+  now lists `@kintools/store-core` as a dependency, and `immer` as a peer
+  dependency rather than a direct one. JSR is unaffected.
+
 ## 0.4.1
 
 - Renamed from `@kin-store/plugins` to `@kintools/store-plugins`. Now also
