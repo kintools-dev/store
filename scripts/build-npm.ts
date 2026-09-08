@@ -21,14 +21,29 @@ interface Mapping {
   peerDependency?: boolean;
 }
 
+const coreVersion = JSON.parse(
+  await Deno.readTextFile("../core/deno.json"),
+).version;
+
+// Without this, dnt inlines all of core's source into the plugins and react
+// npm packages instead of pointing at the published @kintools/store-core.
+const CORE: Record<string, Mapping> = {
+  "@kintools/store-core": {
+    name: "@kintools/store-core",
+    version: `^${coreVersion}`,
+  },
+};
+
 // Bare specifiers (resolved via each package's own deno.json "imports") that
 // dnt can't infer a package.json dependency kind for on its own.
 const MAPPINGS: Record<string, Record<string, Mapping>> = {
   react: {
+    ...CORE,
     react: { name: "react", version: "^19.2.7", peerDependency: true },
   },
   plugins: {
-    immer: { name: "immer", version: "^11.1.8" },
+    ...CORE,
+    immer: { name: "immer", version: "^11.1.8", peerDependency: true },
   },
 };
 
