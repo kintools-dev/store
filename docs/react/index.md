@@ -2,7 +2,7 @@
 description: "@kintools/store-react: useStore and useSelector hooks built on useSyncExternalStore, plus StoreProvider/useStoreContext for dependency injection."
 ---
 
-# React
+# React Bindings
 
 React bindings for `@kintools/store-core`.
 

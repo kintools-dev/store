@@ -2,7 +2,7 @@
 description: "A Next.js App Router todo app showing what SSR changes about using a store: where the instance lives, and when persist is allowed to touch localStorage."
 ---
 
-# Next.js
+# Next.js SSR
 
 A todo app on the App Router, demonstrating the two things SSR changes about
 using a store: where the instance lives, and when `persist` is allowed to touch
