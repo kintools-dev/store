@@ -1,5 +1,5 @@
 ---
-description: "Why Kin Store exists: three primitives (createStore, withPlugins, derive), zero dependencies, full type inference, and opt-in complexity you only pay for when you use it."
+description: "Why Kin Store exists: three primitives (createStore, withPlugins, derive), zero dependencies, full type inference, opt-in complexity."
 ---
 
 # Why Kin Store?

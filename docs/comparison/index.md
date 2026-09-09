@@ -1,6 +1,6 @@
 ---
 pageClass: comparison-page
-description: "A line-by-line comparison of the same todo store implemented in Kin Store, Redux/RTK, Zustand, Jotai, and MobX, with a full feature matrix and the tradeoffs named directly."
+description: "A line-by-line comparison of one todo store built in Kin Store, Redux/RTK, Zustand, Jotai, and MobX, with a feature matrix and named tradeoffs."
 ---
 
 # Comparison

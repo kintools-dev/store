@@ -1,5 +1,5 @@
 ---
-description: "The four principles behind every Kin Store API decision: explicit over implicit, opt-in complexity, type safety by default, and two equally first-class tiers of mutation."
+description: "The four principles behind every Kin Store API decision: explicit over implicit, opt-in complexity, type safety by default, two mutation tiers."
 ---
 
 # Design Principles
@@ -39,13 +39,13 @@ at the call site.
 
 ## Two tiers of mutation
 
-`dispatch.*` and `set` are both first-class ways to change state, neither is
-a fallback for the other. `dispatch.*` calls a named reducer through the
+`dispatch.*` and `set` are both first-class ways to change state, neither is a
+fallback for the other. `dispatch.*` calls a named reducer through the
 middleware pipeline, so the change is traceable, loggable, and cancellable.
 `set` writes state directly, with no pipeline in between. Which one a team
 reaches for is an architectural choice, not a hierarchy, and Kin Store is
-deliberately built so any point on that spectrum is a first-class way to use
-the library:
+deliberately built so any point on that spectrum is a first-class way to use the
+library:
 
 - **Primitive composition** — `createStore` + `derive` + plain functions, no
   `withPlugins` at all.
@@ -58,8 +58,8 @@ the library:
 
 Within a `withPlugins` store, a method can also mix both in the same call:
 `dispatch.*` for the parts of a change that should be traceable, `set` for a
-direct write, matching what that specific change needs rather than a
-store-wide rule. If your team standardizes on one style — e.g. "every mutation
-goes through `dispatch.*`" — that's a convention to hold at the module
-boundary (export `dispatch` and your methods, not `set`, from your store
-module), not something Kin Store enforces for you.
+direct write, matching what that specific change needs rather than a store-wide
+rule. If your team standardizes on one style — e.g. "every mutation goes through
+`dispatch.*`" — that's a convention to hold at the module boundary (export
+`dispatch` and your methods, not `set`, from your store module), not something
+Kin Store enforces for you.

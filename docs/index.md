@@ -1,4 +1,5 @@
 ---
+description: "Kin Store: a tiny, fast, framework-agnostic reactive state library for TypeScript. Zero dependencies, full type inference, React bindings built in."
 layout: home
 ---
 

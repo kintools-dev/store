@@ -1,5 +1,5 @@
 ---
-description: "Install @kintools/store-core, @kintools/store-react, or @kintools/store-plugins from JSR, write your first store with createStore, and grow it with withPlugins."
+description: "Install @kintools/store-core, @kintools/store-react, or @kintools/store-plugins from JSR, then write your first store with createStore."
 ---
 
 # Getting Started

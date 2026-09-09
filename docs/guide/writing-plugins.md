@@ -1,5 +1,5 @@
 ---
-description: "How to write a StorePlugin: reducers and internal state, middleware, methods, and the onActivated/onDestroy lifecycle hooks, for your own Kin Store plugins."
+description: "How to write a StorePlugin: reducers and internal state, middleware, methods, and the onActivated/onDestroy lifecycle hooks."
 ---
 
 # Writing Plugins

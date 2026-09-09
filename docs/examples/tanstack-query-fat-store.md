@@ -1,5 +1,5 @@
 ---
-description: "A checkout flow split along ownership lines: one withPlugins store for what the client owns (cart, step, promo code), TanStack Query for what the server owns."
+description: "A checkout flow split along ownership: one withPlugins store for what the client owns (cart, step, promo), TanStack Query for what the server owns."
 ---
 
 # TanStack Query and One Fat Store

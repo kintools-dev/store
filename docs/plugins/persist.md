@@ -1,5 +1,5 @@
 ---
-description: "The persist plugin persists and hydrates store state to localStorage or any custom sync/async storage backend, with versioned migrations and selective persistence."
+description: "The persist plugin saves and hydrates store state to localStorage or any custom sync/async backend, with versioned migrations and selective persistence."
 ---
 
 # persist
