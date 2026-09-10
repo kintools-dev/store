@@ -170,4 +170,4 @@ Each `.use()` adds capability, not a nesting level. The store grows with you.
 - [withPlugins](/store/guide/with-plugins) — add methods, reducers, and
   middleware
 - [derive](/store/guide/derive) — compose stores reactively
-- [Plugins](/store/plugins/) — persist, history, immer
+- [Plugins](/store/plugins) — persist, history, immer

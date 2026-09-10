@@ -58,7 +58,7 @@ reducer itself.
 It doesn't, on purpose. `createStore`/`withPlugins` model state your client
 owns; server-owned data (cached responses, request dedup, background refetch) is
 TanStack Query's job, not Kin Store's. See the
-[TanStack Query examples](/store/examples/) for two ways to split the two:
+[TanStack Query examples](/store/examples) for two ways to split the two:
 client state as one `withPlugins` store, or one `createStore` per field.
 
 ### Does `persist` or `broadcast` handle conflict resolution for concurrent edits?
@@ -106,5 +106,5 @@ that genuinely needs merged concurrent edits.
 
 Finally, Kin Store isn't trying to out-feature Redux. There's no built-in
 serializable action log format, no time-travel outside the `devtools` plugin,
-and no code-generation step. The [comparison page](/store/comparison/) covers
+and no code-generation step. The [comparison page](/store/comparison) covers
 those tradeoffs directly.

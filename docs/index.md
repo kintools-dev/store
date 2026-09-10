@@ -60,7 +60,7 @@ layout: home
 <Section>
 <SectionHeader>How it compares</SectionHeader>
 <FeatureMatrix />
-<p className="mt-6">For full comparison, <Cta href="/store/comparison/">see the details →</Cta></p>
+<p className="mt-6">For full comparison, <Cta href="/store/comparison">see the details →</Cta></p>
 </Section>
 
 <Section>

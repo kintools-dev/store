@@ -34,7 +34,7 @@ and plugin methods are fully inferred, so you're not hand-annotating what the
 compiler already knows.
 
 Curious how this holds up against Redux, Zustand, Jotai, or MobX in practice?
-See the full [comparison](/store/comparison/) — line-by-line, with the tradeoffs
+See the full [comparison](/store/comparison) — line-by-line, with the tradeoffs
 named directly.
 
 ## Next
