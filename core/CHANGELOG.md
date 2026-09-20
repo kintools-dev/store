@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- **Breaking:** `withPlugins` is removed. Every store from `createStore` now
+  has `.use(plugin)` built in.
+- **Breaking:** Plugins are plain objects of methods plus optional
+  `onActivated`/`onDestroy` hooks that reach the store through `this`.
+  Reducers, middleware, `dispatch`, `getPluginDispatch`, and `PluginStore` are
+  gone.
+- Add `merge(partial | updater)` to the store API.
+
 ## 0.3.1
 
 - Renamed from `@kin-store/core` to `@kintools/store-core`, matching Kin
