@@ -5,10 +5,9 @@ plugins:
 
 - `immer`: write methods with mutable draft syntax, called directly as
   `store.addTodo(...)`
-- `persist`: automatically saves state to `localStorage` and restores it on
-  load
-- `devtools`: connects to the Redux DevTools extension, labeling each state
-  change with the method that triggered it
+- `persist`: automatically saves state to `localStorage` and restores it on load
+- `devtools`: connects to the Redux DevTools extension so every state change
+  shows up in its diff view
 
 ## Stack
 

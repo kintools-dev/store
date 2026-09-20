@@ -17,7 +17,7 @@ lifecycle hooks only when you reach for them.
 
 ## Docs
 
-[→ Documentation website](https://kinstore.dev)
+[→ kintools.dev/store](https://kintools.dev/store)
 
 ## Feature matrix
 
@@ -34,24 +34,25 @@ lifecycle hooks only when you reach for them.
 | No hidden magic           |      ✅       |   ✅    |     ✅      |   ✅   |   ❌    |
 | Reactive composition      |      ✅       |   ⚠️    |     ❌      |   ✅   |   ✅    |
 
-✅ full support · ⚠️ partial or conditional · n/a not applicable (different model)
+✅ full support · ⚠️ partial or conditional · n/a not applicable (different
+model)
 
 Bundle sizes are each library's full package import, bundled with rolldown,
 minified, and gzipped; tree-shaking down to only the APIs you use will land
 smaller across the board.
 
 Don't believe it?
-[See full comparison with code examples →](https://kinstore.dev/comparison)
+[See full comparison with code examples →](https://kintools.dev/store/comparison)
 
 Kin Store is pay-per-use: import only `createStore` and pay 592 B, methods,
-namespacing, and lifecycle hooks included. Import `derive` and pay another
-460 B. The plugin bundles (`persist`, `history`, `immer`) add only what you
-import.
+namespacing, and lifecycle hooks included. Import `derive` and it's 460 B more.
+The plugin bundles (`persist`, `history`, `immer`, and the rest) add only what
+you import.
 
 ## Packages
 
-| Package                                          | Description                                             |
-| ------------------------------------------------ | --------------------------------------------------------- |
-| [`@kintools/store-core`](./core/README.md)       | `createStore`, `derive`: the core primitives             |
-| [`@kintools/store-plugins`](./plugins/README.md) | `persist`, `history`, `immer`: official plugins           |
-| [`@kintools/store-react`](./react/README.md)     | `useStore`, `useSelector`: React bindings                 |
+| Package                                          | Description                                            |
+| ------------------------------------------------ | ------------------------------------------------------ |
+| [`@kintools/store-core`](./core/README.md)       | `createStore`, `derive`: the core primitives           |
+| [`@kintools/store-plugins`](./plugins/README.md) | `persist`, `history`, `immer`, `devtools`, `broadcast` |
+| [`@kintools/store-react`](./react/README.md)     | `useStore`, `useSelector`: React bindings              |
