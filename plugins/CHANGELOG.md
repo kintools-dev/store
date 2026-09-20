@@ -7,8 +7,7 @@
   core.
 - **Breaking:** All plugins are ported to core's new plugin shape (plain
   methods that reach the store through `this`), and no longer register
-  reducers or middleware. Plugin methods are called directly on the store
-  (for example `store.history.undo()`), not through `store.dispatch`.
+  reducers or middleware, since `store.dispatch` no longer exists.
 - **Breaking:** `devtools` no longer labels changes by reducer name. Every
   change is sent to the extension as `"@@CHANGE"` with the new state.
 - `immer` wraps each of a plugin's own methods so `this.set` accepts an Immer
