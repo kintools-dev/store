@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+- **Breaking:** Requires `@kintools/store-core` 0.4.0. The npm package now
+  depends on `@kintools/store-core@^0.4.0`, so `npm update` picks up the new
+  core. The removals in core (`withPlugins`, reducers, middleware, `dispatch`)
+  also apply here, since this package re-exports core.
+- `shallowEqual` now comes from `@kintools/store-core` instead of a local copy.
+  It is still exported from this package.
+
 ## 0.3.3
 
 - Fix the npm build: it inlined a full copy of `@kintools/store-core`'s source
