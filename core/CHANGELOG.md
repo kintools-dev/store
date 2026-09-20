@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Slim the README to install, one usage example, and a docs link.
+
 ## 0.4.0
 
 - **Breaking:** `withPlugins` is removed. Every store from `createStore` now

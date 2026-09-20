@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Slim the README to install, one usage example, and a docs link. It now
+  lists `broadcast`.
+
 ## 0.5.0
 
 - **Breaking:** Requires `@kintools/store-core` 0.4.0. The npm package now
