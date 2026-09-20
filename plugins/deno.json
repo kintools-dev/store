@@ -1,6 +1,6 @@
 {
   "name": "@kintools/store-plugins",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "license": "MIT",
   "imports": {
     "immer": "npm:immer@^11.1.8"

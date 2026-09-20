@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0
+
+- **Breaking:** Requires `@kintools/store-core` 0.4.0. The npm package now
+  depends on `@kintools/store-core@^0.4.0`, so `npm update` picks up the new
+  core.
+- **Breaking:** All plugins are ported to core's new plugin shape (plain
+  methods that reach the store through `this`), and no longer register
+  reducers or middleware. Plugin methods are called directly on the store
+  (for example `store.history.undo()`), not through `store.dispatch`.
+- **Breaking:** `devtools` no longer labels changes by reducer name. Every
+  change is sent to the extension as `"@@CHANGE"` with the new state.
+- `immer` wraps each of a plugin's own methods so `this.set` accepts an Immer
+  recipe.
+
 ## 0.4.2
 
 - Fix the npm build: it inlined a full copy of `@kintools/store-core`'s source
