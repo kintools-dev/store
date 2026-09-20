@@ -7,50 +7,37 @@
 ![100% type-safe](https://img.shields.io/badge/100%25%20type--safe-166534?style=flat)
 ![Zero dependencies](https://img.shields.io/badge/Zero%20dependencies-166534?style=flat)
 
-Start with a plain store. Add structure only when the app earns it.
+One function, `createStore`, gets you `get`/`set`/`merge`/`subscribe` and,
+through `.use()`, methods, namespacing, and lifecycle hooks. `derive` adds
+reactive composition on top when you need it.
 
-| Style    | API                                             | Minified + Gzip |
-| -------- | ----------------------------------------------- | --------------- |
-| Simple   | `createStore` + plain functions                 | 231 B           |
-| Methods  | `withPlugins` + methods                         | 1.0 KB          |
-| Reducers | `withPlugins` + reducers + middleware + methods | 1.0 KB          |
-| Derived  | `derive`                                        | 438 B           |
+| Primitive     | Minified + Gzip |
+| ------------- | ---------------- |
+| `createStore` | 592 B             |
+| `derive`      | 460 B             |
 
-Each step is additive — you never undo what you built. Full type safety at every
-step, zero dependencies, zero ceremony.
+Zero dependencies, zero ceremony. Nothing to opt into beyond importing the
+function you need.
 
 ## Design principles
 
 ### **Explicit over implicit**
 
 No hidden merges, no auto-propagating destroy, no magic dependency graphs. If
-something happens, you triggered it. The `CANCELED` sentinel, named reducers,
-and the two-tier mutation model all follow from this.
+something happens, you triggered it: a `set`/`merge` call, or a method you
+called by name.
 
-### **Opt-in complexity**
+### **One function, opt-in capability**
 
-`createStore` is the floor. `withPlugins` adds methods, reducers, middleware,
-and lifecycle hooks — only when you import it. `derive` adds reactive
-composition — only when you reach for it. You never pay for capability you
-haven't opted into.
+`createStore` alone is `get`/`set`/`merge`/`subscribe`. `.use()` adds methods,
+namespacing, and lifecycle hooks, and only the methods you register ever exist
+on the store. `derive` adds reactive composition on top, only when you reach
+for it.
 
 ### **Type safety by default**
 
-Every reducer argument, dispatch call, and plugin method is fully inferred — no
-`any` or `unknown`, no manual annotation at call sites. The type system is
-load-bearing, not decorative.
-
-### **Two tiers of mutation**
-
-`dispatch.*` and `set` are both first-class ways to change state, not a primary
-path and a fallback. `dispatch.*` calls a named reducer through the middleware
-pipeline — traceable, loggable, cancellable. `set` writes state directly, no
-pipeline involved. A store built entirely from `methods` and `set` is complete
-on its own; so is one built entirely from `reducers` and `dispatch.*`; a method
-can mix both when part of a change should be traceable and part shouldn't. Teams
-that want `dispatch.*` to be the only door in their own codebase should enforce
-that at their store module's boundary (export `dispatch` and methods, not `set`)
-rather than expect a built-in strict mode.
+Every method's arguments are fully inferred: no `any` or `unknown`, no manual
+annotation at call sites. The type system is load-bearing, not decorative.
 
 ---
 
@@ -60,10 +47,9 @@ See [Installation](../README.md#install) in the root README.
 
 ---
 
-## Step 1 — Start simple
+## Step 1: Start simple
 
-A store holds a value and notifies listeners when it changes. Logic lives in
-plain top-level functions.
+A store holds a value and notifies listeners when it changes.
 
 ```ts
 import { createStore } from "@kintools/store-core";
@@ -72,19 +58,17 @@ type TodoState = { todos: string[]; status: "idle" | "loading" };
 
 const todoStore = createStore({ todos: [], status: "idle" } as TodoState);
 
-function addTodo(text: string): void {
-  todoStore.set((s) => ({ ...s, todos: [...s.todos, text] }));
-}
-
-addTodo("Buy groceries");
+todoStore.merge((s) => ({ todos: [...s.todos, "Buy groceries"] }));
 console.log(todoStore.get()); // { todos: ["Buy groceries"], status: "idle" }
 ```
 
-Subscribe to react to changes:
+Subscribe to react to changes. `this` inside a regular-function listener is
+bound to the store, so it can read `this.get()` without a separate closure
+reference:
 
 ```ts
-const unsubscribe = todoStore.subscribe((get, prevState) => {
-  console.log("todos changed:", prevState, "->", get());
+const unsubscribe = todoStore.subscribe(function (prevState) {
+  console.log("todos changed:", prevState, "->", this.get());
 });
 
 // Stop listening:
@@ -93,12 +77,12 @@ unsubscribe();
 
 ---
 
-## Step 2 — Compose stores
+## Step 2: Compose stores
 
-Use `derive` to compute values from multiple stores reactively — no
-`withPlugins` required. Dependencies are tracked automatically: no selector
-arrays, no manual wiring, no hidden graph. The derived store stays cold (no
-subscriptions, no caching) until something subscribes to it.
+Use `derive` to compute values from multiple stores reactively. Dependencies
+are tracked automatically: no selector arrays, no manual wiring, no hidden
+graph. The derived store stays cold (no subscriptions, no caching) until
+something subscribes to it.
 
 ```ts
 import { createStore, derive } from "@kintools/store-core";
@@ -117,8 +101,8 @@ console.log(summary.get());
 // { greeting: "Hello, Ada", itemCount: 0, total: 0 }
 ```
 
-Conditional dependencies — only stores actually read during a recompute are
-subscribed:
+Conditional dependencies: only stores actually read during a recompute are
+subscribed.
 
 ```ts
 const isAdmin = derive((get) => get(userStore).role === "admin");
@@ -137,91 +121,83 @@ function):
 const delta = createStore(1);
 const total = derive<number>((get, prev) => (prev() ?? 0) + get(delta));
 
-total.subscribe((get) => console.log(get()));
+total.subscribe(function () {
+  console.log(this.get());
+});
 delta.set(5); // 6
 delta.set(3); // 9
 ```
 
 ---
 
-## Step 3 — Colocate logic
+## Step 3: Colocate logic
 
-When the store grows, move logic inside it using `withPlugins` + `methods`. Each
-`.use()` call adds a plugin — not a new nesting level:
+When the store grows, move logic inside it with `.use()`. Every method (and
+`onActivated`/`onDestroy`) reaches the store through `this`, including
+earlier methods and sibling methods registered by the same `.use()` call:
 
 ```ts
-import { withPlugins } from "@kintools/store-core";
-import { devtools, persist } from "@kintools/store-plugins";
-
-const todoStore = withPlugins({ todos: [], status: "idle" } as TodoState)
-  .use("persist", persist({ key: "todos" }))
-  .use("devtools", devtools())
+const todoStore = createStore({ todos: [], status: "idle" } as TodoState)
   .use({
-    // A plugin is a plain object: methods/reducers/middleware, nothing
-    // wraps or patches the store to add them.
-    methods: (store) => ({
-      addTodo(text: string): void {
-        store.set((s) => ({ ...s, todos: [...s.todos, text] }));
-      },
-      async fetchTodos(): Promise<void> {
-        store.set((s) => ({ ...s, status: "loading" }));
-        const todos = await api.fetchTodos();
-        store.set({ todos, status: "idle" });
-      },
-    }),
+    addTodo(text: string): void {
+      this.merge((s) => ({ todos: [...s.todos, text] }));
+    },
+    async fetchTodos(): Promise<void> {
+      this.merge({ status: "loading" });
+      const todos = await api.fetchTodos();
+      this.set({ todos, status: "idle" });
+    },
   });
 
-await todoStore.persist.hydrate(); // From the namespaced persist plugin.
-todoStore.addTodo("Buy groceries"); // From the top-level inline plugin.
+todoStore.addTodo("Buy groceries");
+await todoStore.fetchTodos();
 ```
 
-## Step 4 — Add plugins
+`this` is bound via `Function.prototype.apply`, which only rebinds regular
+functions. An arrow-function-valued method does not get this binding. Use
+regular method syntax (`method() {}`) for anything that needs `this`.
 
-Plugins extend the store with zero nesting. Each `.use()` adds one feature —
-never wraps the previous one:
+---
+
+## Step 4: Add plugins
+
+Plugins extend the store with zero nesting. Each `.use()` adds one feature,
+never wraps the previous one. A namespaced plugin's methods live at
+`store.<namespace>.<name>`:
 
 ```ts
-import { history, immer, persist } from "@kintools/store-plugins";
+import { history, persist } from "@kintools/store-plugins";
 
-const todoStore = withPlugins({ todos: [], status: "idle" } as TodoState)
-  .use(immer({
-    reducers: {
-      addTodo(draft, text: string): void {
-        draft.todos.push(text); // Mutate the draft — Immer handles immutability.
-      },
-      fetchFulfilled(draft, todos: string[]): void {
-        draft.todos = todos;
-        draft.status = "idle";
-      },
-    },
-  }))
+const todoStore = createStore({ todos: [], status: "idle" } as TodoState)
   .use("persist", persist({ key: "todos" }))
-  .use("history", history());
+  .use("history", history())
+  .use({
+    addTodo(text: string): void {
+      this.merge((s) => ({ todos: [...s.todos, text] }));
+    },
+  });
 
-todoStore.dispatch.addTodo("Buy groceries");
-todoStore.persist.hydrate();
+await todoStore.persist.hydrate();
+todoStore.addTodo("Buy groceries");
 todoStore.history.undo();
 ```
 
 Compare to Zustand's inside-out middleware nesting:
 
 ```ts
-// Zustand — each middleware wraps the previous one; read inside-out
+// Zustand: each middleware wraps the previous one, read inside-out.
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
-import { immer } from "zustand/middleware/immer";
 
 const useStore = create(
   devtools(
     persist(
-      immer<TodoState>((set) => ({
-        todos: [],
-        status: "idle",
+      (set) => ({
+        todos: [] as string[],
+        status: "idle" as const,
         addTodo: (text: string) =>
-          set((draft) => {
-            draft.todos.push(text);
-          }),
-      })),
+          set((s) => ({ todos: [...s.todos, text] })),
+      }),
       { name: "todos" },
     ),
   ),
@@ -230,146 +206,25 @@ const useStore = create(
 
 ---
 
-## Step 5 — Add structure and traceability
-
-Reducers for state changes. Methods for the flow. Middleware to intercept.
-
-Move state mutations into `reducers` when you want traceability — every dispatch
-travels through a middleware pipeline you control. It isn't a replacement for
-`methods`; the two compose in the same store.
-
-Take the exact store from Step 3 and swap `methods` + `set` for `reducers` +
-`dispatch`:
-
-```ts
-import { withPlugins } from "@kintools/store-core";
-import { devtools, persist } from "@kintools/store-plugins";
-
-const todoStore = withPlugins({ todos: [], status: "idle" } as TodoState)
-  .use("persist", persist({ key: "todos" }))
-  .use("devtools", devtools())
-  .use({
-    reducers: {
-      addTodo: (s, text: string) => ({ ...s, todos: [...s.todos, text] }),
-      fetchStart: (s) => ({ ...s, status: "loading" }),
-      fetchDone: (_s, todos: string[]) => ({ todos, status: "idle" }),
-    },
-    methods: (store) => ({
-      async fetchTodos(): Promise<void> {
-        store.dispatch.fetchStart();
-        const todos = await api.fetchTodos();
-        store.dispatch.fetchDone(todos);
-      },
-    }),
-  });
-
-todoStore.dispatch.addTodo("Buy groceries"); // Full intellisense, logged in devtools.
-```
-
-`set`/`dispatch` are both first-class here: pick whichever fits this store or
-method, not a ladder from one to the other.
-
-Add middleware to observe or intercept every dispatch — including the ones
-plugins trigger internally — and combine with something like `history` for
-undo/redo on the traceable changes:
-
-```ts
-import { history, persist } from "@kintools/store-plugins";
-
-type Todo = { id: number; text: string; done: boolean };
-type TodoState = { todos: Todo[]; status: "idle" | "loading" | "failed" };
-
-const todoStore = withPlugins<TodoState>({ todos: [], status: "idle" })
-  .use("persist", persist({ key: "todos" }))
-  .use("history", history())
-  .use({
-    reducers: {
-      addTodo: (state, text: string) => ({
-        ...state,
-        todos: [...state.todos, { id: Date.now(), text, done: false }],
-      }),
-      fetchStart: (state) => ({ ...state, status: "loading" }),
-      fetchFulfilled: (state, todos: Todo[]) => ({ todos, status: "idle" }),
-      fetchRejected: (state) => ({ ...state, status: "failed" }),
-    },
-
-    middleware: () => (ctx, next) => {
-      console.log("→", ctx.reducer.name, ctx.reducer.args);
-      return next();
-    },
-
-    methods: (store) => ({
-      async fetchTodos(): Promise<void> {
-        store.dispatch.fetchStart();
-        try {
-          const todos = await api.fetchTodos();
-          store.dispatch.fetchFulfilled(todos);
-        } catch {
-          store.dispatch.fetchRejected();
-        }
-      },
-    }),
-  });
-
-todoStore.dispatch.addTodo("Buy groceries");
-await todoStore.fetchTodos();
-todoStore.history.undo();
-```
-
-Return `CANCELED` from a middleware to abort a dispatch without updating state:
-
-```ts
-import { CANCELED } from "@kintools/store-core";
-
-middleware: () => (ctx, next) => {
-  if (!auth.isLoggedIn()) return CANCELED;
-  return next();
-},
-```
-
-Plugins can also be namespaced. Their reducers and methods are scoped so they
-cannot accidentally conflict with other plugins:
-
-```ts
-const todoStore = withPlugins({ todos: [] as string[] }).use("todos", {
-  reducers: {
-    add: (state, text: string) => ({
-      todos: [...state.todos, text],
-    }),
-    clear: () => ({ todos: [] }),
-  },
-
-  methods: (store) => ({
-    async fetch(): Promise<void> {
-      const todos = await api.fetchTodos();
-      // Async work stays in methods; state changes go through reducers.
-      store.dispatch.todos.add(todos[0]);
-    },
-  }),
-});
-
-todoStore.dispatch.todos.add("Buy groceries");
-todoStore.dispatch.todos.clear();
-
-await todoStore.todos.fetch();
-```
-
----
-
 ## `listenerWithSelector`
 
-Wraps a listener so it only fires when a selected slice of the state changes.
-Useful for subscribing to a store outside of React.
+Wraps a listener so it only fires when a selected value from the state changes.
+Useful for subscribing to a store outside of React. The listener receives the
+previous selected value, and `this` inside it is the store. Values are compared
+with `shallowEqual` by default; pass `{ equal }` to override.
 
 ```ts
 import { listenerWithSelector } from "@kintools/store-core";
 
 const store = createStore({ count: 0, name: "Alice" });
+const selectCount = (state: { count: number }) => state.count;
 
 store.subscribe(
   listenerWithSelector(
-    (getSlice, prevSlice) => console.log("count:", prevSlice, "->", getSlice()),
-    (state) => state.count,
+    function (prevSelected, nextSelected) {
+      console.log("count:", prevSelected, "->", nextSelected);
+    },
+    selectCount,
   ),
 );
 
@@ -381,105 +236,49 @@ store.set({ count: 1, name: "Bob" }); // no log
 
 ## Writing a plugin
 
-A `StorePlugin` is a plain object with any combination of `reducers`,
-`middleware`, `methods`, `onActivated`, and `onDestroy`. Plugins can be shared
-and composed independently of the store they are applied to.
-
-### Reducers and internal state
-
-All changes to the store's primary state (`TState`) should go through a reducer,
-not `set`. Reducers travel through the full middleware pipeline — they can be
-logged, traced, or canceled by any middleware in the chain:
-
-```ts
-// Observe every reducer call, including ones from plugins:
-((ctx, next) => {
-  console.log(ctx.reducer.name); // "history._restore", "persist._restore", ...
-  return next();
-});
-
-// Cancel a specific reducer under a condition:
-((ctx, next) => {
-  if (ctx.reducer.name === "persist._restore" && !auth.isReady()) {
-    return CANCELED;
-  }
-  return next();
-});
-```
-
-`set` bypasses the pipeline by design — use it when you need a hard reset that
-must survive middleware that would otherwise cancel it, or when traceability is
-not a goal.
-
-Plugin-internal bookkeeping — flags, counters, listener sets — lives in closure
-variables, not `TState`.
-
-### Middleware
-
-A plugin can include middleware that runs on every dispatch:
-
-```ts
-import { withPlugins } from "@kintools/store-core";
-import type { StorePlugin } from "@kintools/store-core";
-
-type State = { count: number };
-
-const loggingPlugin: StorePlugin<State> = {
-  middleware: (ctx, next) => {
-    console.log("->", ctx.reducer.name, ctx.reducer.args);
-    const result = next();
-    console.log("<-", result);
-    return result;
-  },
-};
-
-const store = withPlugins({ count: 0 }).use(loggingPlugin);
-```
+A `StorePlugin` is a plain object of methods plus optional `onActivated`/
+`onDestroy` lifecycle hooks, no factory function, no `store` parameter.
+Plugins can be shared and composed independently of the store they are
+applied to.
 
 ### Lifecycle hooks
 
-`onActivated` runs immediately after the plugin is registered; `onDestroy` runs
-when `store.destroy()` is called:
+`onActivated` runs immediately after the plugin's methods are attached to the
+store; `onDestroy` runs when `store.destroy()` is called, in registration
+order, before the store is marked destroyed:
 
 ```ts
-const store = withPlugins({ count: 0 }).use({
-  onActivated: (store) => {
-    console.log("initial state:", store.get());
+const store = createStore({ count: 0 }).use({
+  onActivated() {
+    console.log("initial state:", this.get());
   },
-  onDestroy: (store) => {
-    console.log("final state:", store.get());
+  onDestroy() {
+    console.log("final state:", this.get());
+  },
+  increment(amount: number): void {
+    this.merge((s) => ({ count: s.count + amount }));
   },
 });
 ```
 
-### Dispatching from methods
+### Internal state
 
-Use `getPluginDispatch` to call a plugin's own reducers from `methods`,
-regardless of whether the plugin is namespaced:
-
-```ts
-import { getPluginDispatch } from "@kintools/store-core";
-
-methods: (store, { namespace }) => {
-  const dispatch = getPluginDispatch(store, namespace);
-  return {
-    undo(): void { dispatch._restore(previousState); },
-  };
-},
-```
+Plugin-internal bookkeeping (flags, counters, listener sets) lives in the
+factory's closure variables, not `TState`.
 
 ### Plugin factory functions
 
-To write a reusable, shareable plugin (like the official `persist` and `history`
-plugins), wrap it in a generic factory function. The four type parameters mirror
-the store's accumulated shape at the point the plugin is applied:
+To write a reusable, shareable plugin (like the official `persist` and
+`history` plugins), wrap it in a generic factory function. The type
+parameters mirror the store's accumulated shape at the point the plugin is
+applied. A plain object can't itself carry `TState` for inference (it's only
+visible inside the `ThisType` marker, which inference doesn't look through),
+so the function's declared return type includes the `StorePluginFactory`
+union member purely so `TState` infers correctly at the `.use()` call site;
+the function still just returns a plain object:
 
 ```ts
-import type {
-  NestedMethods,
-  NestedReducers,
-  StorePlugin,
-} from "@kintools/store-core";
+import type { NestedMethods, StorePlugin } from "@kintools/store-core";
 
 type LoggerOptions = {
   prefix?: string;
@@ -491,60 +290,57 @@ type LoggerMethods = {
 
 export function logger<
   TState,
-  TStoreReducers extends NestedReducers<TState>,
   TStoreMethods extends NestedMethods,
   TNamespace extends string | undefined,
 >(
   options: LoggerOptions = {},
-): StorePlugin<
-  TState,
-  TStoreReducers,
-  TStoreMethods,
-  TNamespace,
-  {}, // no reducers added by this plugin
-  LoggerMethods // methods this plugin adds
-> {
+): StorePlugin<TState, TStoreMethods, TNamespace, LoggerMethods> {
   const prefix = options.prefix ?? "→";
   const logs: string[] = [];
 
   return {
-    middleware: () => (ctx, next) => {
-      const entry = `${prefix} ${String(ctx.reducer.name)}`;
-      logs.push(entry);
-      console.log(entry, ctx.reducer.args);
-      return next();
+    onActivated() {
+      this.subscribe((prevState) => {
+        const entry = `${prefix} ${JSON.stringify(prevState)} -> ${
+          JSON.stringify(this.get())
+        }`;
+        logs.push(entry);
+        console.log(entry);
+      });
     },
-    methods: () => ({
-      getLogs: () => [...logs],
-    }),
+    getLogs: () => [...logs],
   };
 }
 ```
 
-To constrain which stores the plugin can be applied to, tighten `TStoreMethods`
-or `TStoreReducers`. TypeScript will error if the dependency is not registered
-first:
+To constrain which stores the plugin can be applied to, tighten
+`TStoreMethods`. This only works if the plugin contributes at least one real
+(non-optional) method: `PluginBody`'s `ThisType` marker carries no structural
+members of its own, so a plugin with *only* `onActivated`/`onDestroy` (both
+optional) is trivially compatible with any store regardless of
+`TStoreMethods`: there's nothing required for TypeScript to check. A real
+method gives it something to check:
 
 ```ts
 // Requires a `history` plugin to already be registered
 export function undoOnEscape<
   TState,
-  TStoreReducers extends NestedReducers<TState>,
   TStoreMethods extends NestedMethods & { history: { undo(): boolean } },
   TNamespace extends string | undefined,
->(): StorePlugin<TState, TStoreReducers, TStoreMethods, TNamespace> {
+>(): StorePlugin<TState, TStoreMethods, TNamespace, { armEscapeHandler(): void }> {
   return {
-    onActivated(store) {
+    armEscapeHandler() {
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") store.history.undo();
+        if (e.key === "Escape") this.history.undo();
       });
     },
   };
 }
 
-const store = withPlugins({ count: 0 })
+const store = createStore({ count: 0 })
   .use("history", history())
-  .use(undoOnEscape()); // ✓ — history is present
+  .use(undoOnEscape()); // OK: history is present
+store.armEscapeHandler();
 
-withPlugins({ count: 0 }).use(undoOnEscape()); // ✗ — type error: history not registered
+createStore({ count: 0 }).use(undoOnEscape()); // type error: history not registered
 ```

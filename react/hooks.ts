@@ -1,7 +1,6 @@
 import { useRef, useSyncExternalStore } from "react";
 
-import type { ReadonlyStore } from "@kintools/store-core";
-import { shallowEqual } from "./shallow-equal.ts";
+import { type ReadonlyStore, shallowEqual } from "@kintools/store-core";
 
 /**
  * Reads the whole state and triggers re-renders on every state change.

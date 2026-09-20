@@ -17,16 +17,16 @@ tells other tabs when a key changes. The `storage` event fires only in tabs that
 _didn't_ make the write, so there's no risk of a tab reacting to its own change:
 
 ```ts
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { persist } from "@kintools/store-plugins";
 
 const KEY = "todos";
 
-const store = withPlugins({ items: [] as string[] })
+const store = createStore({ items: [] as string[] })
   .use("persist", persist({ key: KEY }))
   .use({
-    reducers: {
-      addTodo: (s, text: string) => ({ items: [...s.items, text] }),
+    addTodo(text: string): void {
+      this.merge((s) => ({ items: [...s.items, text] }));
     },
   });
 
@@ -81,18 +81,18 @@ the new state on every change, and apply whatever arrives.
 That's exactly what the [`broadcast`](/store/plugins/broadcast) plugin does:
 
 ```ts
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { broadcast } from "@kintools/store-plugins";
 
-const store = withPlugins({ items: [] as string[] })
+const store = createStore({ items: [] as string[] })
   .use({
-    reducers: {
-      addTodo: (s, text: string) => ({ items: [...s.items, text] }),
+    addTodo(text: string): void {
+      this.merge((s) => ({ items: [...s.items, text] }));
     },
   })
   .use("broadcast", broadcast({ name: "todos" }));
 
-store.dispatch.addTodo("hello"); // seen by other tabs sharing the "todos" channel
+store.addTodo("hello"); // seen by other tabs sharing the "todos" channel
 ```
 
 It's worth reaching for the plugin instead of hand-rolling this one: unlike the

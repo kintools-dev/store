@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects } from "@std/assert";
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { persist, type PersistStorage } from "./persist.ts";
 
 function makeMemoryStorage(): PersistStorage & {
@@ -19,9 +19,11 @@ function makeMemoryStorage(): PersistStorage & {
 }
 
 function makeStore(storage: PersistStorage, key = "test") {
-  return withPlugins({ count: 0 })
+  return createStore({ count: 0 })
     .use({
-      reducers: { increment: (s, n: number) => ({ count: s.count + n }) },
+      increment(n: number): void {
+        this.merge((s) => ({ count: s.count + n }));
+      },
     })
     .use("persist", persist({ key, storage }));
 }
@@ -40,7 +42,7 @@ Deno.test("persist - persists state changes to storage", async () => {
   const store = makeStore(storage);
   await store.persist.hydrationComplete();
 
-  store.dispatch.increment(5);
+  store.increment(5);
   const raw = storage.getItem("test") as string;
   const stored = JSON.parse(raw);
   assertEquals(stored.value.count, 5);
@@ -59,7 +61,7 @@ Deno.test("persist - clear removes item from storage", async () => {
   const store = makeStore(storage);
   await store.persist.hydrationComplete();
 
-  store.dispatch.increment(1);
+  store.increment(1);
   await store.persist.clear();
   assertEquals(storage.getItem("test"), null);
 });
@@ -71,7 +73,7 @@ Deno.test("persist - skipHydration skips auto-hydration", async () => {
     JSON.stringify({ value: { count: 99 }, version: 0 }),
   );
 
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use(
       "persist",
       persist({ key: "skip-test", storage, skipHydration: true }),
@@ -95,7 +97,7 @@ Deno.test("persist - skipHydration with no storage option never touches the loca
   delete (globalThis as any).localStorage;
 
   try {
-    const store = withPlugins({ count: 0 })
+    const store = createStore({ count: 0 })
       .use("persist", persist({ key: "no-storage-test", skipHydration: true }));
 
     assertEquals(store.get().count, 0);
@@ -106,7 +108,7 @@ Deno.test("persist - skipHydration with no storage option never touches the loca
 
 Deno.test("persist - selector persists only a slice", async () => {
   const storage = makeMemoryStorage();
-  const store = withPlugins({ count: 0, label: "hello" })
+  const store = createStore({ count: 0, label: "hello" })
     .use(
       "persist",
       persist({
@@ -127,6 +129,21 @@ Deno.test("persist - selector persists only a slice", async () => {
   assertEquals(stored.value.label, undefined);
 });
 
+Deno.test("persist - default merge replaces array state instead of spreading it", async () => {
+  const storage = makeMemoryStorage();
+  storage.setItem(
+    "array-test",
+    JSON.stringify({ value: [4, 5], version: 0 }),
+  );
+
+  const store = createStore([1, 2, 3])
+    .use("persist", persist({ key: "array-test", storage }));
+
+  await store.persist.hydrationComplete();
+  assertEquals(store.get(), [4, 5]);
+  assertEquals(Array.isArray(store.get()), true);
+});
+
 Deno.test("persist - version mismatch without migrate discards stored value", async () => {
   const storage = makeMemoryStorage();
   storage.setItem(
@@ -134,7 +151,7 @@ Deno.test("persist - version mismatch without migrate discards stored value", as
     JSON.stringify({ value: { count: 50 }, version: 0 }),
   );
 
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use("persist", persist({ key: "v-test", storage, version: 1 }));
 
   await store.persist.hydrationComplete();
@@ -148,7 +165,7 @@ Deno.test("persist - migrate is called on version mismatch", async () => {
     JSON.stringify({ value: { count: 10 }, version: 0 }),
   );
 
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use(
       "persist",
       persist({
@@ -169,7 +186,7 @@ Deno.test("persist - corrupted storage is silently ignored", async () => {
   const storage = makeMemoryStorage();
   storage.setItem("bad-test", "not-json{{{{");
 
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use("persist", persist({ key: "bad-test", storage }));
 
   await store.persist.hydrationComplete();
@@ -185,7 +202,7 @@ Deno.test("persist - onHydrationStart fires before hydration", async () => {
 
   let stateAtHydrate: { count: number } | undefined;
   // skipHydration so we can register the listener before hydration starts
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use("persist", persist({ key: "onh-test", storage, skipHydration: true }));
 
   store.persist.onHydrationStart((state) => {
@@ -205,7 +222,7 @@ Deno.test("persist - onHydrationComplete fires after hydration", async () => {
 
   let stateAfterHydrate: { count: number } | undefined;
   // skipHydration so we can register the listener before hydration starts
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use(
       "persist",
       persist({ key: "onh2-test", storage, skipHydration: true }),
@@ -222,7 +239,7 @@ Deno.test("persist - onHydrationComplete fires after hydration", async () => {
 Deno.test("persist - onHydrationStart unsubscribe works", async () => {
   const storage = makeMemoryStorage();
   let calls = 0;
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use(
       "persist",
       persist({ key: "unsub-test", storage, skipHydration: true }),
@@ -251,7 +268,7 @@ Deno.test("persist - async storage is supported", async () => {
 
   data["async-test"] = JSON.stringify({ value: { count: 33 }, version: 0 });
 
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use("persist", persist({ key: "async-test", storage: asyncStorage }));
 
   await store.persist.hydrationComplete();
@@ -269,7 +286,7 @@ Deno.test("persist - hydrationComplete rejects after a failed hydration", async 
 
   // Construction/activation must not throw or produce an unhandled
   // rejection even though the initial auto-hydration fails internally.
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use("persist", persist({ key: "fail-test", storage: failingStorage }));
 
   await assertRejects(

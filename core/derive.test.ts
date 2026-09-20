@@ -33,12 +33,12 @@ Deno.test("derive - subscriber notified when dependency changes", () => {
   assertEquals(calls, 1);
 });
 
-Deno.test("derive - subscriber receives get and prevState", () => {
+Deno.test("derive - subscriber receives this.get() and prevState", () => {
   const n = createStore(1);
   const doubled = derive((get) => get(n) * 2);
   let received: { prev: number; next: number } | undefined;
-  doubled.subscribe((get, prevState) => {
-    received = { prev: prevState, next: get() };
+  doubled.subscribe(function (prevState) {
+    received = { prev: prevState, next: this.get() };
   });
   n.set(2);
   assertEquals(received, { prev: 2, next: 4 });
@@ -104,7 +104,9 @@ Deno.test("derive - switches tracked deps when branch changes", () => {
   const result = derive((get) => (get(toggle) ? get(a) : get(b)));
 
   const values: string[] = [];
-  result.subscribe((get) => values.push(get()));
+  result.subscribe(function () {
+    values.push(this.get());
+  });
 
   toggle.set(false); // now deps are toggle + b
   a.set("A2"); // a is no longer tracked → no notification
@@ -164,8 +166,8 @@ Deno.test(
     n.set(7);
 
     let received = 0;
-    doubled.subscribe((get) => {
-      received = get();
+    doubled.subscribe(function () {
+      received = this.get();
     });
 
     n.set(8);
@@ -208,8 +210,8 @@ Deno.test(
     const quadrupled = derive((get) => get(doubled) * 2);
 
     let received: number | undefined;
-    quadrupled.subscribe((get) => {
-      received = get();
+    quadrupled.subscribe(function () {
+      received = this.get();
     });
 
     n.set(5);

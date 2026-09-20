@@ -1,5 +1,5 @@
 /**
- * `@kintools/store-react` — React bindings for `@kintools/store-core`, built on
+ * `@kintools/store-react`: React bindings for `@kintools/store-core`, built on
  * `useSyncExternalStore`.
  *
  * - {@linkcode useStore} and {@linkcode useSelector} subscribe a component to
@@ -19,4 +19,3 @@ export * from "@kintools/store-core";
 
 export * from "./context.tsx";
 export * from "./hooks.ts";
-export * from "./shallow-equal.ts";

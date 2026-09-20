@@ -1,45 +1,89 @@
-import type { Listener } from "./_types.ts";
-import type {
-  InferActions,
-  NestedMethods,
-  NestedReducers,
-  PluginStore,
-  Reducers,
-} from "./with-plugins.ts";
+import type { Listener, ReadonlyStore } from "./create-store.ts";
 
 /**
- * Wraps a {@linkcode Listener} so that it only fires when a selected slice of
- * the state changes, rather than on every state update.
+ * Compares two values one level deep: primitives (and identical references)
+ * via `Object.is`, and arrays/objects by comparing their own enumerable keys
+ * with `Object.is`, without recursing into nested values.
  *
- * The slice is extracted by `selector` on each state change. The listener is
- * only called when `equal` returns `false` for the previous and next slices.
- * By default, `Object.is` is used for equality comparison.
+ * @param a The first value.
+ * @param b The second value.
+ * @returns `true` if `a` and `b` are equal one level deep.
+ *
+ * @example Comparing derived arrays and objects
+ * ```ts
+ * shallowEqual([1, 2, 3], [1, 2, 3]); // true
+ * shallowEqual({ a: 1 }, { a: 1 }); // true
+ * shallowEqual({ a: 1 }, { a: 2 }); // false
+ * shallowEqual({ a: { b: 1 } }, { a: { b: 1 } }); // false: nested object differs by reference
+ * ```
+ */
+export function shallowEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+
+  if (
+    typeof a !== "object" || a === null ||
+    typeof b !== "object" || b === null
+  ) {
+    return false;
+  }
+
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+
+  const record = b as Record<string, unknown>;
+  for (const key of keysA) {
+    if (
+      !Object.hasOwn(record, key) ||
+      !Object.is((a as Record<string, unknown>)[key], record[key])
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Wraps a listener so that it only fires when a selected part of the state
+ * changes, rather than on every state update.
+ *
+ * The value is extracted by `selector` on each state change. The listener is
+ * only called when `equal` returns `false` for the previous and next selected
+ * values. By default, {@linkcode shallowEqual} is used for equality
+ * comparison.
  *
  * This utility is available for use in any context where you need to narrow
- * a broad {@linkcode Listener} down to a specific slice — for example when
- * subscribing to a store outside of React.
+ * a broad {@linkcode Listener} down to a specific part of the state, for
+ * example when subscribing to a store outside of React.
  *
  * @template TState The full state type of the store being subscribed to.
- * @template TSlice The type of the selected slice the listener cares about.
+ * @template TSelected The type of the selected value the listener cares
+ * about. It can be anything the selector returns.
+ * @template TStore The type of `this` inside the listener. Inferred from the
+ * store it is subscribed to, so on a regular store the listener can also call
+ * `this.set()`/`this.merge()`, while on a derived store it can't.
  *
- * @param listener The narrowed listener to wrap. It will be called with the
- * selected slice's getter and previous slice.
- * @param selector A function that picks the slice of interest from the full
+ * @param listener The narrowed listener to wrap. It receives the previous and
+ * next selected values, and `this` inside it is the store, so `this.get()`
+ * returns the full current state.
+ * @param selector A function that picks the value of interest from the full
  * state.
  * @param options.equal An optional custom equality function. Defaults to
- * `Object.is`.
+ * {@linkcode shallowEqual}.
  * @returns A new {@linkcode Listener} for `TState` that internally filters by
- * the selected slice.
+ * the selected value.
  *
  * @example Subscribing only to a counter inside a larger state
  * ```ts
  * const store = createStore({ count: 0, name: "Alice" });
+ * const selectCount = (state: { count: number }) => state.count;
  *
  * const listener = listenerWithSelector(
- *   (getSlice, prevSlice) => {
- *     console.log("count changed:", prevSlice, "->", getSlice());
+ *   function (prevSelected, nextSelected) {
+ *     console.log("count changed:", prevSelected, "->", nextSelected);
  *   },
- *   (state) => state.count,
+ *   selectCount,
  * );
  *
  * store.subscribe(listener);
@@ -51,93 +95,42 @@ import type {
  * @example Using a custom equality function for arrays
  * ```ts
  * const listener = listenerWithSelector(
- *   (getSlice) => console.log("items:", getSlice()),
+ *   function () {
+ *     console.log("items:", this.get().items);
+ *   },
  *   (state) => state.items,
  *   { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
  * );
  * ```
  */
-export function listenerWithSelector<TState, TSlice>(
-  listener: Listener<TSlice>,
-  selector: (state: TState) => TSlice,
-  options: { equal?: (prevSlice: TSlice, nextSlice: TSlice) => boolean } = {},
-): Listener<TState> {
-  const { equal = Object.is } = options;
+export function listenerWithSelector<
+  TState,
+  TSelected,
+  TStore extends ReadonlyStore<TState> = ReadonlyStore<TState>,
+>(
+  listener: (
+    this: TStore,
+    prevSelected: TSelected,
+    nextSelected: TSelected,
+  ) => void,
+  selector: (state: TState) => TSelected,
+  options: {
+    equal?: (prevSelected: TSelected, nextSelected: TSelected) => boolean;
+  } = {},
+): Listener<TState, TStore> {
+  const { equal = shallowEqual } = options;
 
-  let slice: TSlice | undefined;
+  let selected: TSelected | undefined;
 
-  function getSlice(): TSlice {
-    return slice!;
-  }
+  return function (this: TStore, prevState: TState): void {
+    const nextSelected = selector(this.get());
 
-  return (get, prevState) => {
-    const nextSlice = selector(get());
+    if (selected === undefined) selected = selector(prevState);
 
-    if (slice === undefined) slice = selector(prevState);
-
-    if (!equal(slice, nextSlice)) {
-      const prevSlice = slice;
-      slice = nextSlice;
-      listener(getSlice, prevSlice);
+    if (!equal(selected, nextSelected)) {
+      const prevSelected = selected;
+      selected = nextSelected;
+      listener.call(this, prevSelected, nextSelected);
     }
   };
-}
-
-/**
- * Returns the correctly-typed dispatch object for a plugin's own reducers.
- *
- * When a plugin is registered under a namespace, its actions live at
- * `store.dispatch[namespace]`. For top-level plugins they live directly on
- * `store.dispatch`. This helper resolves the right target and narrows the type
- * so callers can invoke the plugin's internal actions without casting.
- *
- * Typically used inside {@linkcode import("./with-plugins.ts").StorePlugin.methods methods},
- * {@linkcode import("./with-plugins.ts").StorePlugin.onActivated onActivated}, and
- * {@linkcode import("./with-plugins.ts").StorePlugin.onDestroy onDestroy} to
- * access the plugin's own reducers:
- *
- * ```ts
- * methods: (store, { namespace }) => {
- *   const dispatch = getPluginDispatch(store, namespace);
- *   return {
- *     undo(): void {
- *       dispatch._restore(previousState);
- *     },
- *   };
- * }
- * ```
- *
- * @template TState The store's state type.
- * @template TStoreReducers The reducers registered on the store.
- * @template TStoreMethods The methods registered on the store.
- * @template TNamespace The plugin's namespace, or `undefined` for top-level.
- * @template TPluginReducers The plugin's own reducers type, inferred from
- * `store`'s type; no need to specify it explicitly.
- *
- * @param store The store passed to the plugin callback.
- * @param namespace The namespace the plugin was registered under, or
- * `undefined` for top-level plugins. Pass the `namespace` from
- * {@linkcode import("./with-plugins.ts").PluginContext PluginContext} directly.
- */
-export function getPluginDispatch<
-  TState,
-  TStoreReducers extends NestedReducers<TState>,
-  TStoreMethods extends NestedMethods,
-  TNamespace extends string | undefined,
-  TPluginReducers extends Reducers<TState>,
->(
-  store: PluginStore<
-    TState,
-    TStoreReducers,
-    TStoreMethods,
-    TNamespace,
-    TPluginReducers
-  >,
-  namespace: TNamespace,
-): InferActions<TState, TPluginReducers> {
-  return namespace
-    // deno-lint-ignore no-explicit-any
-    ? (store.dispatch as any)[namespace]
-    // deno-lint-ignore no-explicit-any
-    : (store.dispatch as any);
 }

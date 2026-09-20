@@ -1,4 +1,4 @@
-import { notify, throwError } from "./_internals.ts";
+import { throwError } from "./_internals.ts";
 import type { Listener, ReadonlyStore } from "./create-store.ts";
 
 /**
@@ -48,7 +48,7 @@ export type DerivedStore<TState> =
  *
  * Dependencies are discovered automatically the first time `get` is
  * called (or the first subscriber registers). After that, the derived value is
- * kept in sync reactively — it is recomputed lazily only when a dependency
+ * kept in sync reactively: it is recomputed lazily only when a dependency
  * actually changes.
  *
  * When there are no subscribers, the derived store is "cold": subscriptions to
@@ -60,10 +60,10 @@ export type DerivedStore<TState> =
  * @param compute A pure function that receives two helpers and returns the
  * derived value.
  *
- * - `get(sourceStore)` — reads a source store's current state and registers
+ * - `get(sourceStore)`: reads a source store's current state and registers
  *   it as a dependency. Every store passed to `get` inside a single
  *   recompute becomes a tracked dependency for that run.
- * - `prev()` — returns the derived store's **previous** computed value
+ * - `prev()`: returns the derived store's **previous** computed value
  *   (`undefined` on the very first computation). Use this to build
  *   accumulators or smoothing functions that incorporate their own prior
  *   output.
@@ -102,7 +102,7 @@ export type DerivedStore<TState> =
  * console.log(fullName.get()); // "Ada Byron"
  * ```
  *
- * @example Conditional dependencies — only the active branch is tracked
+ * @example Conditional dependencies: only the active branch is tracked
  * ```ts
  * const toggle = createStore(true);
  * const a = createStore("A");
@@ -118,8 +118,8 @@ export type DerivedStore<TState> =
  * const price = createStore(100);
  * const taxed = derive((get) => get(price) * 1.2);
  *
- * const unsubscribe = taxed.subscribe((get, prevState) => {
- *   console.log("price changed:", prevState, "->", get());
+ * const unsubscribe = taxed.subscribe(function (prevState) {
+ *   console.log("price changed:", prevState, "->", this.get());
  * });
  *
  * price.set(200); // logs: price changed: 120 -> 240
@@ -133,13 +133,15 @@ export type DerivedStore<TState> =
  * // Accumulates each delta into a running total.
  * const total = derive<number>((get, prev) => (prev() ?? 0) + get(delta));
  *
- * total.subscribe((get) => console.log(get()));
+ * total.subscribe(function () {
+ *   console.log(this.get());
+ * });
  *
  * delta.set(5); // logs: 6  (0 + 1 + 5)
  * delta.set(3); // logs: 9  (6 + 3)
  * ```
  *
- * @see {@link https://github.com/zustandjs/derive-zustand} — original inspiration
+ * @see {@link https://github.com/zustandjs/derive-zustand} (original inspiration)
  */
 export function derive<TState>(
   compute: ComputeFn<TState>,
@@ -147,8 +149,9 @@ export function derive<TState>(
   let state: TState | undefined;
   let isInvalidated = true;
   let isDestroyed = false;
+  let isNotifying = false;
   let dependencies: Map<ReadonlyStore, unknown> | undefined;
-  const listeners = new Set<Listener<TState>>();
+  let listeners = new Set<Listener<TState>>();
   const subscriptions = new Map<ReadonlyStore, VoidFunction>();
 
   function checkDestroyed(): void | never {
@@ -159,7 +162,17 @@ export function derive<TState>(
     if (isInvalidated) return;
 
     isInvalidated = true;
-    notify(listeners, get, state!);
+    const prevState = state!;
+
+    const wasNotifying = isNotifying;
+    isNotifying = true;
+    try {
+      for (const listener of listeners) {
+        listener.call(store, prevState);
+      }
+    } finally {
+      isNotifying = wasNotifying;
+    }
   }
 
   function anyDependencyChanged(): boolean {
@@ -213,12 +226,14 @@ export function derive<TState>(
   function subscribe(listener: Listener<TState>): VoidFunction {
     checkDestroyed();
 
+    if (isNotifying) listeners = new Set(listeners);
     listeners.add(listener);
 
     // Trigger read to establish dependencies if this is the first subscriber.
     if (listeners.size === 1) get();
 
     return () => {
+      if (isNotifying) listeners = new Set(listeners);
       listeners.delete(listener);
       if (listeners.size === 0) clearDependencies();
     };
@@ -239,9 +254,11 @@ export function derive<TState>(
     isDestroyed = true;
   }
 
-  return {
+  const store: DerivedStore<TState> = {
     destroy,
     get,
     subscribe,
   };
+
+  return store;
 }

@@ -1,17 +1,17 @@
 ---
-description: "The same TanStack Query checkout flow, built with one createStore per client-owned field instead of a single withPlugins store, merged with derive."
+description: "The same TanStack Query checkout flow, built with one createStore per client-owned field instead of a single store with methods, merged with derive."
 ---
 
 # TanStack Query and Primitive Stores
 
 The same checkout flow as
 [TanStack Query and One Fat Store](/store/examples/tanstack-query-fat-store),
-built the other way: instead of one `withPlugins` store holding the whole client
-state, each field gets its own `createStore`, and a `derive` store merges them
-for persistence. Kin Store still holds what the _client_ owns (cart contents,
+built the other way: instead of one store with methods holding the whole
+client state, each field gets its own `createStore`, and a `derive` store
+merges them for persistence. Kin Store still holds what the _client_ owns (cart contents,
 current step, draft promo code); TanStack Query still holds what the _server_
 owns (catalog, stock, computed pricing, order history). Full source in
-[`examples/checkout-jotai-style-react-query`](https://github.com/kintools-dev/store/tree/main/examples/checkout-jotai-style-react-query).
+[`examples/checkout-minimal-style-react-query`](https://github.com/kintools-dev/store/tree/main/examples/checkout-minimal-style-react-query).
 
 ## Why split state at all
 
@@ -62,12 +62,12 @@ derive((get) => ({
   promoCode: get(promoCodeStore),
   zip: get(zipStore),
   lastOrderId: get(lastOrderIdStore),
-})).subscribe((get) => {
-  localStorage.setItem(PERSIST_KEY, JSON.stringify(get()));
+})).subscribe(function () {
+  localStorage.setItem(PERSIST_KEY, JSON.stringify(this.get()));
 });
 
 // App logic is plain functions that read and write the primitive stores
-// directly — no reducers, no dispatch.
+// directly, no methods, no plugin system involved.
 export function setQuantity(productId: string, quantity: number) {
   let v = itemsStore.get();
   v = quantity <= 0
@@ -98,13 +98,12 @@ export function startNewOrder() {
 ```
 
 The `persist` plugin doesn't apply here the way it does in the fat-store
-version: it attaches to a single mutable store via `withPlugins`, and there
-isn't one, just five independent stores plus a read-only `derive` view over
-them. So persistence is hand-rolled instead: `derive` produces the merged
-snapshot, and `subscribe` writes it to `localStorage` on every change. The
-`persist` plugin's schema versioning, migration, and async-storage support
-aren't available for free here; they'd need to be written by hand too, if
-needed.
+version: it attaches via `.use()` to a single mutable store, and there isn't
+one, just five independent stores plus a read-only `derive` view over them.
+So persistence is hand-rolled instead: `derive` produces the merged snapshot,
+and `subscribe` writes it to `localStorage` on every change. The `persist`
+plugin's schema versioning, migration, and async-storage support aren't
+available for free here; they'd need to be written by hand too, if needed.
 
 ## Reading a field
 
@@ -122,7 +121,7 @@ export function App() {
 }
 ```
 
-Compare to the fat-store version's `useSelector(checkoutStore, (s) => s.step)` —
+Compare to the fat-store version's `useSelector(checkoutStore, (s) => s.step)`:
 the selector's job (narrowing a subscription to one field) is already done by
 the store boundary itself.
 
@@ -154,7 +153,7 @@ export function useCartPricing() {
 
 ## Writing back from a mutation
 
-`completeOrder` is a plain function, not a dispatched reducer, so a mutation's
+`completeOrder` is a plain function, not a store method, so a mutation's
 `onSuccess` just calls it directly:
 
 ```ts

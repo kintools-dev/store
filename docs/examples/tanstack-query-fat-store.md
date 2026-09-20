@@ -1,5 +1,5 @@
 ---
-description: "A checkout flow split along ownership: one withPlugins store for what the client owns (cart, step, promo), TanStack Query for what the server owns."
+description: "A checkout flow split along ownership: one store with methods for what the client owns (cart, step, promo), TanStack Query for what the server owns."
 ---
 
 # TanStack Query and One Fat Store
@@ -7,12 +7,11 @@ description: "A checkout flow split along ownership: one withPlugins store for w
 A checkout flow that splits state along ownership lines: Kin Store holds what
 the _client_ owns (cart contents, current step, draft promo code), TanStack
 Query holds what the _server_ owns (catalog, stock, computed pricing, order
-history). This variant keeps the client half as one `withPlugins` store with
-reducers; see
+history). This variant keeps the client half as one store with methods; see
 [TanStack Query and Primitive Stores](/store/examples/tanstack-query-primitive-stores)
 for the same app built the other way, one `createStore` per field. Full source
 in
-[`examples/checkout-redux-style-react-query`](https://github.com/kintools-dev/store/tree/main/examples/checkout-redux-style-react-query).
+[`examples/checkout-structured-style-react-query`](https://github.com/kintools-dev/store/tree/main/examples/checkout-structured-style-react-query).
 
 ## Why split state at all
 
@@ -28,7 +27,7 @@ store.
 
 ```ts
 // src/store.ts
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { devtools, persist } from "@kintools/store-plugins";
 
 export type CartItem = { productId: string; quantity: number };
@@ -50,12 +49,12 @@ const initialState: CheckoutState = {
   lastOrderId: null,
 };
 
-export const checkoutStore = withPlugins(initialState)
+export const checkoutStore = createStore(initialState)
   .use("persist", persist({ key: "checkout-react-query" }))
   .use(import.meta.env.DEV ? devtools() : {})
   .use({
-    reducers: {
-      setQuantity(state, productId: string, quantity: number) {
+    setQuantity(productId: string, quantity: number): void {
+      this.merge((state) => {
         const items = quantity <= 0
           ? state.items.filter((i) => i.productId !== productId)
           : state.items.some((i) => i.productId === productId)
@@ -64,31 +63,31 @@ export const checkoutStore = withPlugins(initialState)
           )
           : [...state.items, { productId, quantity }];
 
-        return { ...state, items };
-      },
-      applyPromoCode(state, code: string) {
-        return { ...state, promoCode: code.trim() || null };
-      },
-      setZip(state, zip: string) {
-        return { ...state, zip };
-      },
-      setStep(state, step: Step) {
-        return { ...state, step };
-      },
-      completeOrder(_state, orderId: string) {
-        return { ...initialState, step: "confirmation", lastOrderId: orderId };
-      },
-      startNewOrder() {
-        return initialState;
-      },
+        return { items };
+      });
+    },
+    applyPromoCode(code: string): void {
+      this.merge({ promoCode: code.trim() || null });
+    },
+    setZip(zip: string): void {
+      this.merge({ zip });
+    },
+    setStep(step: Step): void {
+      this.merge({ step });
+    },
+    completeOrder(orderId: string): void {
+      this.set({ ...initialState, step: "confirmation", lastOrderId: orderId });
+    },
+    startNewOrder(): void {
+      this.set(initialState);
     },
   });
 ```
 
-Nothing here is server data — no product list, no stock counts, no computed
+Nothing here is server data: no product list, no stock counts, no computed
 totals. Just the cart the shopper is building and where they are in the flow,
-all in one place. It's a plain module-level singleton (a client-only SPA has no
-per-request isolation concern, unlike the
+all in one place. It's a plain module-level singleton (a client-only SPA has
+no per-request isolation concern, unlike the
 [Next.js example](/store/examples/nextjs)), and `persist` means an abandoned
 cart is still there if they come back later.
 
@@ -142,7 +141,7 @@ export function useSubmitOrder() {
     mutationFn: submitOrder,
     onSuccess: (order) => {
       // Client state moves to "confirmation" and forgets the cart.
-      checkoutStore.dispatch.completeOrder(order.id);
+      checkoutStore.completeOrder(order.id);
       // Server state is invalidated so the order-history list refetches.
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
@@ -152,8 +151,8 @@ export function useSubmitOrder() {
 
 ## Driving the UI off the store
 
-The top-level `step` selection is what decides which panel renders — no router,
-no separate page per step:
+The top-level `step` selection is what decides which panel renders: no
+router, no separate page per step.
 
 ```tsx
 // src/App.tsx

@@ -1,131 +1,111 @@
 import { assertEquals } from "@std/assert";
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { immer } from "./immer.ts";
 
-Deno.test("immer - reducer mutates draft to produce new state", () => {
-  const store = withPlugins({ count: 0 }).use(
+Deno.test("immer - a method mutates the draft to produce new state", () => {
+  const store = createStore({ count: 0 }).use(
     immer({
-      reducers: {
-        increment(draft, amount: number) {
+      increment(amount: number): void {
+        this.set((draft) => {
           draft.count += amount;
-        },
+        });
       },
     }),
   );
 
-  store.dispatch.increment(3);
+  store.increment(3);
   assertEquals(store.get().count, 3);
 });
 
-Deno.test("immer - multiple reducers", () => {
-  const store = withPlugins({ count: 0, items: [] as string[] }).use(
+Deno.test("immer - multiple methods", () => {
+  const store = createStore({ count: 0, items: [] as string[] }).use(
     immer({
-      reducers: {
-        increment(draft, n: number) {
+      increment(n: number): void {
+        this.set((draft) => {
           draft.count += n;
-        },
-        addItem(draft, item: string) {
+        });
+      },
+      addItem(item: string): void {
+        this.set((draft) => {
           draft.items.push(item);
-        },
+        });
       },
     }),
   );
 
-  store.dispatch.increment(2);
-  store.dispatch.addItem("hello");
+  store.increment(2);
+  store.addItem("hello");
   assertEquals(store.get(), { count: 2, items: ["hello"] });
 });
 
 Deno.test("immer - original state is not mutated", () => {
   const initial = { count: 0 };
-  const store = withPlugins(initial).use(
+  const store = createStore(initial).use(
     immer({
-      reducers: {
-        increment(draft) {
+      increment(): void {
+        this.set((draft) => {
           draft.count++;
-        },
+        });
       },
     }),
   );
 
-  store.dispatch.increment();
+  store.increment();
   assertEquals(initial.count, 0); // untouched
 });
 
-Deno.test("immer - set in methods accepts a recipe", () => {
-  const store = withPlugins({ count: 0, items: [] as string[] }).use(
+Deno.test("immer - reset combines with increment via a second recipe", () => {
+  const store = createStore({ count: 0, items: [] as string[] }).use(
     immer({
-      reducers: {
-        increment(draft, n: number) {
+      increment(n: number): void {
+        this.set((draft) => {
           draft.count += n;
-        },
+        });
       },
-      methods: (s) => ({
-        reset() {
-          s.set((draft) => {
-            draft.count = 0;
-            draft.items = [];
-          });
-        },
-      }),
+      reset(): void {
+        this.set((draft) => {
+          draft.count = 0;
+          draft.items = [];
+        });
+      },
     }),
   );
 
-  store.dispatch.increment(5);
-  (store as unknown as { reset(): void }).reset();
+  store.increment(5);
+  store.reset();
   assertEquals(store.get(), { count: 0, items: [] });
 });
 
 Deno.test("immer - namespaced immer plugin", () => {
-  const store = withPlugins({ todos: [] as { title: string; done: boolean }[] })
+  const store = createStore({ todos: [] as { title: string; done: boolean }[] })
     .use(
       "todos",
       immer({
-        reducers: {
-          add(draft, title: string) {
+        add(title: string): void {
+          this.set((draft) => {
             draft.todos.push({ title, done: false });
-          },
-          complete(draft, index: number) {
+          });
+        },
+        complete(index: number): void {
+          this.set((draft) => {
             draft.todos[index].done = true;
-          },
+          });
         },
       }),
     );
 
-  store.dispatch.todos.add("Buy milk");
-  store.dispatch.todos.complete(0);
+  store.todos.add("Buy milk");
+  store.todos.complete(0);
   assertEquals(store.get().todos[0], { title: "Buy milk", done: true });
-});
-
-Deno.test("immer - middlewares still run for immer reducers", () => {
-  let called = 0;
-
-  const store = withPlugins({ count: 0 }).use(
-    immer({
-      reducers: {
-        increment(draft) {
-          draft.count++;
-        },
-      },
-      middleware: () => [(_ctx, next) => {
-        called++;
-        return next();
-      }],
-    }),
-  );
-
-  store.dispatch.increment();
-  assertEquals(called, 1);
 });
 
 Deno.test("immer - onActivated receives immer-wrapped store", () => {
   let stateAtActivation: { count: number } | undefined;
 
-  withPlugins({ count: 7 }).use(
+  createStore({ count: 7 }).use(
     immer({
-      reducers: {},
-      onActivated: (store) => {
-        stateAtActivation = store.get();
+      onActivated() {
+        stateAtActivation = this.get();
       },
     }),
   );
@@ -133,20 +113,39 @@ Deno.test("immer - onActivated receives immer-wrapped store", () => {
   assertEquals(stateAtActivation?.count, 7);
 });
 
-Deno.test("immer - array push via draft does not share refs across dispatches", () => {
-  const store = withPlugins({ items: [] as number[] }).use(
+Deno.test("immer - a method calls a sibling method via this", () => {
+  const store = createStore({ count: 0 }).use(
     immer({
-      reducers: {
-        push(draft, n: number) {
-          draft.items.push(n);
-        },
+      increment(n: number): void {
+        this.set((draft) => {
+          draft.count += n;
+        });
+      },
+      incrementTwice(n: number): void {
+        this.increment(n);
+        this.increment(n);
       },
     }),
   );
 
-  store.dispatch.push(1);
+  store.incrementTwice(3);
+  assertEquals(store.get().count, 6);
+});
+
+Deno.test("immer - array push via draft does not share refs across calls", () => {
+  const store = createStore({ items: [] as number[] }).use(
+    immer({
+      push(n: number): void {
+        this.set((draft) => {
+          draft.items.push(n);
+        });
+      },
+    }),
+  );
+
+  store.push(1);
   const snap1 = store.get().items;
-  store.dispatch.push(2);
+  store.push(2);
   const snap2 = store.get().items;
 
   assertEquals(snap1, [1]);

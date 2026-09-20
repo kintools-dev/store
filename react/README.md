@@ -19,7 +19,7 @@ deno add jsr:@kintools/store-react
 ## `useStore`
 
 Subscribes a component to a store's whole state and re-renders on every state
-change. Backed by `useSyncExternalStore` — safe for concurrent mode.
+change. Backed by `useSyncExternalStore`, safe for concurrent mode.
 
 ```tsx
 import { useStore } from "@kintools/store-react";
@@ -37,7 +37,7 @@ instead.
 
 Selects a transformed value from the state and re-renders only when that value
 changes, using an equality function to decide whether it actually changed.
-Defaults to `shallowEqual`, which compares the value one level deep — safe even
+Defaults to `shallowEqual`, which compares the value one level deep, safe even
 when the selector returns a new object or array reference on every call (e.g.
 `.filter()`, `.map()`, object literals).
 
@@ -80,7 +80,7 @@ const progress = useSelector(
 
 ## `StoreProvider` and `useStoreContext`
 
-Inject a store via React context — useful for testing or server-side rendering
+Inject a store via React context, useful for testing or server-side rendering
 where you want to avoid module-level singletons.
 
 ```tsx
@@ -89,11 +89,11 @@ import {
   useSelector,
   useStoreContext,
 } from "@kintools/store-react";
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 
-const store = withPlugins({ count: 0 }).use({
-  reducers: {
-    increment: (state, n: number) => ({ ...state, count: state.count + n }),
+const store = createStore({ count: 0 }).use({
+  increment(n: number): void {
+    this.merge((s) => ({ count: s.count + n }));
   },
 });
 
@@ -109,7 +109,7 @@ function Counter(): JSX.Element {
   const store = useStoreContext<typeof store>();
   const count = useSelector(store, (s) => s.count);
 
-  return <button onClick={() => store.dispatch.increment(1)}>{count}</button>;
+  return <button onClick={() => store.increment(1)}>{count}</button>;
 }
 ```
 

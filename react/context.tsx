@@ -14,7 +14,7 @@ const StoreContext = createContext<ReadonlyStore | null>(null);
  *
  * @example
  * ```tsx
- * const store = withPlugins({ count: 0 }).use(counterPlugin);
+ * const store = createStore({ count: 0 }).use(counterPlugin);
  *
  * function App(): JSX.Element {
  *   return (
@@ -27,7 +27,7 @@ const StoreContext = createContext<ReadonlyStore | null>(null);
  * function Counter(): JSX.Element {
  *   const store = useStoreContext<typeof store>();
  *   const count = useSelector(store, (s) => s.count);
- *   return <button onClick={() => store.dispatch.increment(1)}>{count}</button>;
+ *   return <button onClick={() => store.increment(1)}>{count}</button>;
  * }
  * ```
  */

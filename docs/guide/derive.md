@@ -60,7 +60,9 @@ self-referential function:
 const delta = createStore(1);
 const total = derive<number>((get, prev) => (prev() ?? 0) + get(delta));
 
-total.subscribe((get) => console.log(get()));
+total.subscribe(function () {
+  console.log(this.get());
+});
 delta.set(5); // logs: 6
 delta.set(3); // logs: 9
 ```
@@ -86,7 +88,7 @@ view.destroy();
 | **Auto-tracked** | `get()` registers the dependency. No selector arrays needed.                            |
 | **Lazy**         | Cold when no subscribers. Zero computation cost until something listens.                |
 | **Conditional**  | Branches only subscribe to stores they actually read in a given pass.                   |
-| **No paradigm**  | Just stores that talk to each other — no atoms, no signals, no graph concepts to learn. |
+| **No paradigm**  | Just stores that talk to each other: no atoms, no signals, no graph concepts to learn. |
 
 ## With React
 
@@ -97,7 +99,7 @@ import { useStore } from "@kintools/store-react";
 
 function Summary() {
   const { greeting, itemCount } = useStore(summary);
-  return <div>{greeting} — {itemCount} items</div>;
+  return <div>{greeting}: {itemCount} items</div>;
 }
 ```
 

@@ -6,6 +6,8 @@ description: "Install @kintools/store-core, @kintools/store-react, or @kintools/
 
 ## Install
 
+### Core
+
 For vanilla projects:
 
 <CodeGroup>
@@ -44,6 +46,8 @@ deno add jsr:@kintools/store-core
 
 </CodeGroup>
 
+### React
+
 For React projects (`@kintools/store-core` is included):
 
 <CodeGroup>
@@ -81,6 +85,8 @@ deno add jsr:@kintools/store-react
 </CodeGroupItem>
 
 </CodeGroup>
+
+### Plugins
 
 To add official plugins:
 
@@ -132,7 +138,7 @@ type TodoState = { todos: string[]; status: "idle" | "loading" };
 const store = createStore({ todos: [], status: "idle" } as TodoState);
 
 function addTodo(text: string): void {
-  store.set((s) => ({ ...s, todos: [...s.todos, text] }));
+  store.merge((s) => ({ todos: [...s.todos, text] }));
 }
 
 addTodo("Buy groceries");
@@ -143,18 +149,16 @@ console.log(store.get());
 When your app grows, move logic into the store with `.use()`:
 
 ```ts
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { history, persist } from "@kintools/store-plugins";
 
-const store = withPlugins({ todos: [], status: "idle" } as TodoState)
+const store = createStore({ todos: [], status: "idle" } as TodoState)
   .use("persist", persist({ key: "todos" }))
   .use("history", history())
   .use({
-    methods: (store) => ({
-      addTodo(text: string): void {
-        store.set((s) => ({ ...s, todos: [...s.todos, text] }));
-      },
-    }),
+    addTodo(text: string): void {
+      this.merge((s) => ({ todos: [...s.todos, text] }));
+    },
   });
 
 store.addTodo("Buy groceries");
@@ -166,8 +170,8 @@ Each `.use()` adds capability, not a nesting level. The store grows with you.
 
 ## What's next
 
-- [createStore](/store/guide/create-store) — the minimal foundation
-- [withPlugins](/store/guide/with-plugins) — add methods, reducers, and
-  middleware
-- [derive](/store/guide/derive) — compose stores reactively
-- [Plugins](/store/plugins) — persist, history, immer
+- [createStore](/store/guide/create-store): the minimal foundation
+- [Using Plugins](/store/guide/with-plugins): add methods, namespacing, and
+  lifecycle hooks
+- [derive](/store/guide/derive): compose stores reactively
+- [Plugins](/store/plugins): persist, history, immer

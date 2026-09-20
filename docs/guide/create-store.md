@@ -1,45 +1,24 @@
 ---
-description: "createStore is Kin Store's minimal primitive, a value plus get, set, and subscribe, with no dispatch, no action types, and no plugins required."
+description: "createStore is Kin Store's one primitive: get, set, merge, and subscribe, plus .use() to add methods, namespacing, and lifecycle hooks when you need them."
 ---
 
 # createStore
 
-The irreducible floor. A value and three methods.
+A value and six methods:
+
+- `get`, `set`, `merge`, `subscribe` for a minimal start
+- `use`, `destroy` for opt-in structure and teardown
 
 ```ts
 import { createStore } from "@kintools/store-core";
-```
 
-## Basic usage
-
-```ts
 type TodoState = { todos: string[]; status: "idle" | "loading" | "failed" };
-
 const store = createStore({ todos: [], status: "idle" } as TodoState);
 ```
 
-`createStore` holds any value and returns an object with three methods: `get`,
-`set`, and `subscribe`. Logic lives in plain top-level functions — no dispatch,
-no action types.
-
-```ts
-function addTodo(text: string): void {
-  store.set((s) => ({ ...s, todos: [...s.todos, text] }));
-}
-
-async function fetchTodos(): Promise<void> {
-  store.set((s) => ({ ...s, status: "loading" }));
-  try {
-    const todos = await api.getTodos();
-    store.set({ todos, status: "idle" });
-  } catch {
-    store.set((s) => ({ ...s, status: "failed" }));
-  }
-}
-
-addTodo("Hello world");
-console.log(store.get()); // { todos: ['Hello world'], status: 'idle' }
-```
+`createStore` holds any value. Logic can live in plain top-level functions with
+no methods registered at all, or colocated on the store with `.use()`; see
+[Structure](/store/guide/with-plugins).
 
 ## API
 
@@ -59,57 +38,92 @@ Accepts a new value or an updater function. Notifies all subscribers.
 // Replace the whole state.
 store.set({ todos: [], status: "idle" });
 
-// Merge via updater (the idiomatic pattern — avoids stale closures).
+// Update via a function (avoids stale closures).
 store.set((s) => ({ ...s, todos: [...s.todos, "new item"] }));
+```
+
+### `merge(partial)`
+
+Shallow-merges an object into the current state. Behaves like
+`set((s) => ({ ...s, ...partial }))`, or `set((s) => ({ ...s, ...partial(s) }))`
+when given a function. Always notifies, even if no value changed.
+
+Meant for object-shaped state; merging into a primitive or array store isn't
+meaningful.
+
+```ts
+const store = createStore({ count: 0, name: "a" });
+
+store.merge({ count: 1 });
+console.log(store.get()); // { count: 1, name: "a" }
+
+store.merge((s) => ({ count: s.count + 1 }));
+console.log(store.get()); // { count: 2, name: "a" }
 ```
 
 ### `subscribe(listener)`
 
-Fires on every state change. Returns an unsubscribe function.
+Registers a listener that is called on every state change. Returns a function
+that unregisters it.
+
+`this` inside a regular-function listener is bound to the store, so it can read
+`this.get()` without a separate closure reference. An arrow-function listener
+doesn't get `this` rebinding, but can read the store from its enclosing closure
+instead.
 
 ```ts
-const unsubscribe = store.subscribe((get, prevState) => {
-  console.log(prevState, "->", get());
+const unsubscribe = store.subscribe(function (prevState) {
+  console.log(prevState, "->", this.get());
 });
 
-// Stop listening.
-unsubscribe();
+unsubscribe(); // stop listening
 ```
 
-The listener receives `get` (a getter, not the value itself) and `prevState`
-(the state before the change). Using a getter allows
-[`derive`](/store/guide/derive) to stay lazy: a derived store defers
-recomputation until something actually calls its `get()`, instead of recomputing
-eagerly on every upstream change.
+### `destroy()`
+
+Removes all listeners and runs every registered `onDestroy` hook. Safe to call
+more than once; any other method throws after the first call.
+
+```ts
+store.destroy();
+store.get(); // throws: "The store has been destroyed"
+```
 
 ## `listenerWithSelector`
 
-Wraps a listener so it only fires when a selected slice of the state changes.
+Wraps a listener so it only fires when a selected value from the state changes.
+
 Useful for subscribing to a store outside of React without unnecessary re-runs.
+The listener receives the previous selected value, and `this` inside it is the
+store. Values are compared with `shallowEqual` by default; pass `{ equal }` to
+override.
 
 ```ts
 import { listenerWithSelector } from "@kintools/store-core";
 
 const store = createStore({ count: 0, name: "Alice" });
+const selectCount = (state: { count: number }) => state.count;
 
 store.subscribe(
   listenerWithSelector(
-    (getSlice, prevSlice) => console.log("count:", prevSlice, "->", getSlice()),
-    (state) => state.count,
+    function (prevSelected, nextSelected) {
+      console.log("count:", prevSelected, "->", nextSelected);
+    },
+    selectCount,
   ),
 );
 
 store.set({ count: 1, name: "Alice" }); // logs: count: 0 -> 1
-store.set({ count: 1, name: "Bob" }); // no log — count didn't change
+store.set({ count: 1, name: "Bob" }); // no log, count didn't change
 ```
 
-## When to use createStore
+## When to keep it minimal
 
-`createStore` is the right choice when:
+A bare `createStore`, no `.use()` calls, is the right choice when:
 
-- You want the minimal API with no overhead
-- Logic is small enough to live in module-level functions
-- You're building a library or utility on top of Kin Store
+- You want the minimal API with no overhead.
+- Logic is small enough to live in module-level functions.
+- You're building a library or utility on top of Kin Store.
 
-When you need methods colocated with the store, a dispatch pipeline, or
-middleware, reach for [`withPlugins`](/store/guide/with-plugins).
+When you want methods colocated with the store, namespacing, or lifecycle hooks,
+reach for `.use()`; see [Structure](/store/guide/with-plugins).

@@ -1,13 +1,14 @@
-import {
-  getPluginDispatch,
-  type NestedMethods,
-  type NestedReducers,
-  type StorePlugin,
-} from "@kintools/store-core";
+import type { NestedMethods, StorePlugin } from "@kintools/store-core";
 
-type HistoryReducers<TState> = {
-  /** @internal Replace the entire state (used by undo/redo/reset). */
-  _restore: (state: TState, savedState: TState) => TState;
+/**
+ * Options accepted by {@linkcode history}.
+ */
+export type HistoryOptions = {
+  /**
+   * Maximum number of snapshots to keep. When exceeded, the oldest snapshot is
+   * dropped. Defaults to unlimited.
+   */
+  limit?: number;
 };
 
 type HistoryMethods = {
@@ -52,55 +53,33 @@ type HistoryMethods = {
 };
 
 /**
- * Options accepted by {@linkcode history}.
- */
-export type HistoryOptions = {
-  /**
-   * Maximum number of snapshots to keep. When exceeded, the oldest snapshot is
-   * dropped. Defaults to unlimited.
-   */
-  limit?: number;
-};
-
-/**
  * Creates a plugin that tracks state history and enables undo / redo / reset.
  *
- * Every state change that goes through the dispatch pipeline is recorded.
- * Changes made via {@linkcode import("@kintools/store-core").StoreWithPlugins.set set}
- * (which bypasses the pipeline) are **also** recorded because the plugin
- * subscribes to all state changes via `store.subscribe`.
- *
- * The plugin adds an internal `_restore` reducer to the store. Undo, redo, and
- * reset all dispatch this reducer so the state change is visible to any
- * registered middlewares.
- *
- * The namespace is provided automatically via `store.use(namespace, history())` —
- * you do not need to pass it to the plugin factory itself.
- *
- * The plugin works by saving state snapshots rather than reducer actions so it
- * can support both reducer-based and `set`-based mutations.
+ * Every state change is recorded, however it happens (`store.set()`,
+ * `store.merge()`, or any plugin method), because the plugin records via
+ * `store.subscribe` rather than hooking any particular write path.
  *
  * Pass `{ limit }` to cap memory use in apps with frequent state changes.
  * Once the limit is reached, the oldest snapshot is dropped on each new change.
  *
  * @remarks When used together with
- * {@linkcode import("./persist.ts").persist persist} plugin, place this plugin
- * after `persist`. If the `persist` plugin uses an async storage,
- * {@linkcode HistoryMethods.rebase rebase} is needed to set the hydrated state
- * as the new baseline.
+ * {@linkcode import("./persist.ts").persist persist}, place this plugin after
+ * `persist`. If `persist` uses an async storage,
+ * {@linkcode HistoryMethods.rebase rebase} is needed to set the hydrated
+ * state as the new baseline.
  *
  * @example Basic usage
  * ```ts
- * const store = withPlugins({ count: 0 })
+ * const store = createStore({ count: 0 })
  *   .use({
- *     reducers: {
- *       increment: (state, n: number) => ({ ...state, count: state.count + n }),
+ *     increment(n: number): void {
+ *       this.merge((s) => ({ count: s.count + n }));
  *     },
  *   })
  *   .use("history", history());
  *
- * store.dispatch.increment(1); // count = 1
- * store.dispatch.increment(1); // count = 2
+ * store.increment(1); // count = 1
+ * store.increment(1); // count = 2
  *
  * store.history.canUndo(); // true
  * store.history.undo();    // count = 1
@@ -109,26 +88,17 @@ export type HistoryOptions = {
  * ```
  *
  * @template TState The store's state type.
- * @template TStoreReducers Reducers already on the store before this plugin is applied.
  * @template TStoreMethods Methods already on the store before this plugin is applied.
  * @template TNamespace The namespace passed to `store.use(namespace, history())`,
  * or `undefined` for top-level. Inferred automatically.
  */
 export function history<
   TState,
-  TStoreReducers extends NestedReducers<TState>,
   TStoreMethods extends NestedMethods,
   TNamespace extends string | undefined,
 >(
   options: HistoryOptions = {},
-): StorePlugin<
-  TState,
-  TStoreReducers,
-  TStoreMethods,
-  TNamespace,
-  HistoryReducers<TState>,
-  HistoryMethods
-> {
+): StorePlugin<TState, TStoreMethods, TNamespace, HistoryMethods> {
   const { limit = Infinity } = options;
   const snapshots: TState[] = [];
   let index = 0;
@@ -143,60 +113,54 @@ export function history<
   }
 
   return {
-    reducers: {
-      _restore: (_state, savedState: TState) => savedState,
-    },
+    onActivated() {
+      snapshots.push(this.get());
 
-    methods: (store, { namespace }) => {
-      const dispatch = getPluginDispatch(store, namespace);
-
-      return {
-        canRedo,
-        canUndo,
-        redo(): boolean {
-          if (!canRedo()) return false;
-
-          isRestoring = true;
-          dispatch._restore(snapshots[++index]);
-          isRestoring = false;
-          return true;
-        },
-        reset() {
-          isRestoring = true;
-          dispatch._restore(snapshots[0]);
-          snapshots.length = 1;
-          index = 0;
-          isRestoring = false;
-        },
-        rebase() {
-          snapshots[0] = store.get();
-          snapshots.length = 1;
-          index = 0;
-        },
-        undo(): boolean {
-          if (!canUndo()) return false;
-
-          isRestoring = true;
-          dispatch._restore(snapshots[--index]);
-          isRestoring = false;
-          return true;
-        },
-      };
-    },
-
-    onActivated: (store) => {
-      snapshots.push(store.get());
-
-      store.subscribe((get) => {
+      this.subscribe(() => {
         if (isRestoring) return;
 
         snapshots.length = index + 1;
-        snapshots.push(get());
+        snapshots.push(this.get());
         if (snapshots.length > limit) {
           snapshots.shift();
         }
         index = snapshots.length - 1;
       });
+    },
+
+    canRedo,
+    canUndo,
+
+    redo(): boolean {
+      if (!canRedo()) return false;
+
+      isRestoring = true;
+      this.set(snapshots[++index]);
+      isRestoring = false;
+      return true;
+    },
+
+    reset() {
+      isRestoring = true;
+      this.set(snapshots[0]);
+      snapshots.length = 1;
+      index = 0;
+      isRestoring = false;
+    },
+
+    rebase() {
+      snapshots[0] = this.get();
+      snapshots.length = 1;
+      index = 0;
+    },
+
+    undo(): boolean {
+      if (!canUndo()) return false;
+
+      isRestoring = true;
+      this.set(snapshots[--index]);
+      isRestoring = false;
+      return true;
     },
   };
 }

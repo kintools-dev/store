@@ -1,14 +1,4 @@
-import {
-  getPluginDispatch,
-  type NestedMethods,
-  type NestedReducers,
-  type StorePlugin,
-} from "@kintools/store-core";
-
-type BroadcastReducers<TState> = {
-  /** @internal Replace the entire state with one received from another tab. */
-  _apply: (state: TState, nextState: TState) => TState;
-};
+import type { NestedMethods, StorePlugin } from "@kintools/store-core";
 
 type BroadcastMethods = {
   /**
@@ -55,10 +45,9 @@ function postMessage<TState>(
  *
  * Unlike {@linkcode import("./persist.ts").persist persist}, this plugin
  * does not touch storage: every state change is broadcast to other tabs
- * directly, and an incoming state is applied through an internal `_apply`
- * reducer so middlewares can observe it. Tabs opened after others request
- * the current state on activation, so they don't have to wait for the next
- * change to catch up.
+ * directly, and an incoming state is applied via `store.set()`. Tabs opened
+ * after others request the current state on activation, so they don't have
+ * to wait for the next change to catch up.
  *
  * Conflicts are resolved last-write-wins by wall-clock time: if two tabs
  * change state within the same millisecond, one of the changes is silently
@@ -73,72 +62,53 @@ function postMessage<TState>(
  *
  * @example Basic usage
  * ```ts
- * const store = withPlugins({ items: [] as string[] })
+ * const store = createStore({ items: [] as string[] })
  *   .use({
- *     reducers: {
- *       add: (state, item: string) => ({ items: [...state.items, item] }),
+ *     add(item: string): void {
+ *       this.merge((s) => ({ items: [...s.items, item] }));
  *     },
  *   })
  *   .use("broadcast", broadcast({ name: "todos" }));
  *
- * store.dispatch.add("hello"); // seen by other tabs sharing the "todos" channel
+ * store.add("hello"); // seen by other tabs sharing the "todos" channel
  * ```
  *
  * @example Combined with persist for storage plus live sync
  * ```ts
- * const store = withPlugins({ items: [] as string[] })
+ * const store = createStore({ items: [] as string[] })
  *   .use("persist", persist({ key: "todos" }))
  *   .use("broadcast", broadcast({ name: "todos" }));
  * ```
  *
  * @template TState The store's state type.
- * @template TStoreReducers Reducers already on the store before this plugin is applied.
  * @template TStoreMethods Methods already on the store before this plugin is applied.
  * @template TNamespace The namespace passed to `store.use(namespace, broadcast(...))`,
  * or `undefined` for top-level. Inferred automatically.
  */
 export function broadcast<
   TState,
-  TStoreReducers extends NestedReducers<TState>,
   TStoreMethods extends NestedMethods,
   TNamespace extends string | undefined,
 >(
   options: BroadcastOptions,
-): StorePlugin<
-  TState,
-  TStoreReducers,
-  TStoreMethods,
-  TNamespace,
-  BroadcastReducers<TState>,
-  BroadcastMethods
-> {
+): StorePlugin<TState, TStoreMethods, TNamespace, BroadcastMethods> {
   const { name } = options;
 
-  // Assigned in onActivated, but referenced by close() (defined earlier in
-  // methods) through this shared binding rather than by value.
+  // Assigned in onActivated, but referenced by close() through this shared
+  // binding rather than by value.
   let channel: BroadcastChannel;
   let isApplying = false;
   let clock = 0;
 
   return {
-    reducers: {
-      _apply: (_state, nextState: TState) => nextState,
-    },
-
-    methods: () => ({
-      close: () => channel.close(),
-    }),
-
-    onActivated(store, { namespace }) {
-      const dispatch = getPluginDispatch(store, namespace);
-
+    onActivated() {
       channel = new BroadcastChannel(name);
 
       channel.onmessage = (event: MessageEvent<Message<TState>>) => {
         const message = event.data;
 
         if (message.type === "request") {
-          postMessage(channel, { type: "state", state: store.get(), clock });
+          postMessage(channel, { type: "state", state: this.get(), clock });
           return;
         }
 
@@ -149,20 +119,20 @@ export function broadcast<
         clock = message.clock;
         isApplying = true;
         try {
-          dispatch._apply(message.state);
+          this.set(message.state);
         } finally {
           isApplying = false;
         }
       };
 
-      store.subscribe((get) => {
+      this.subscribe(() => {
         if (isApplying) return;
         // `Math.max` with `clock + 1` keeps the clock strictly increasing
         // even across multiple changes within the same millisecond, so a
         // rapid second change is never mistaken for a stale duplicate of
         // the first by a receiving tab.
         clock = Math.max(Date.now(), clock + 1);
-        postMessage(channel, { type: "state", state: get(), clock });
+        postMessage(channel, { type: "state", state: this.get(), clock });
       });
 
       // Ask any already-open tabs for their current state, in case this
@@ -171,6 +141,10 @@ export function broadcast<
     },
 
     onDestroy() {
+      channel.close();
+    },
+
+    close() {
       channel.close();
     },
   };

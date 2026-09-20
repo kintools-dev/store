@@ -1,9 +1,8 @@
 /**
- * Kin Store's speed-benchmark harness for the plain `createStore` tier
- * (`store.set(updater)`), the tier comparable to Zustand/Jotai/MobX's own
- * direct-mutation APIs. See `kin-store-dispatch.harness.tsx` for the
- * `withPlugins`/`dispatch` tier instead, and `harness.ts` for the contract
- * and `speed-bench.ts` for how these methods get driven and averaged.
+ * Kin Store's speed-benchmark harness (`store.merge(updater)`), comparable to
+ * Zustand/Jotai/MobX's own direct-mutation APIs. See `harness.ts` for the
+ * contract and `speed-bench.ts` for how these methods get driven and
+ * averaged.
  */
 
 // deno-lint-ignore-file require-await -- internal measurement script: every
@@ -107,22 +106,21 @@ function setup(): { store: Store<CounterState>; sum: DerivedStore<number> } {
 }
 
 function incField(store: Store<CounterState>, index: number): void {
-  store.set((s) => ({
-    ...s,
+  store.merge((s) => ({
     fields: s.fields.map((v, i) => i === index ? v + 1 : v),
   }));
 }
 
 function swapItems(store: Store<CounterState>, a: number, b: number): void {
-  store.set((s) => {
+  store.merge((s) => {
     const items = s.items.slice();
     [items[a], items[b]] = [items[b], items[a]];
-    return { ...s, items };
+    return { items };
   });
 }
 
 export const kinStoreHarness: SpeedHarness = {
-  name: "Kin Store (set)",
+  name: "Kin Store",
 
   async mount(): Promise<Metrics> {
     const { store, sum } = setup();

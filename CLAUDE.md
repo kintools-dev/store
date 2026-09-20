@@ -9,8 +9,8 @@ Kin Store — a framework-agnostic, zero-dependency TypeScript reactive state
 library, published to JSR. It's a Deno workspace with three publishable packages
 plus docs and examples.
 
-- `@kintools/store-core` (`core/`) — `createStore`, `withPlugins`, `derive`: the
-  primitives everything else is built on.
+- `@kintools/store-core` (`core/`): `createStore`, `derive`, the primitives
+  everything else is built on.
 - `@kintools/store-plugins` (`plugins/`) — official plugins: `persist`,
   `history`, `immer`, `devtools`.
 - `@kintools/store-react` (`react/`) — `useStore`, `useSelector`,
@@ -18,9 +18,11 @@ plus docs and examples.
 - `docs/` — documentation content (Markdown + images): guides, plugin docs,
   comparison page. No site tooling lives here; kintools.dev reads this folder at
   build time and renders it.
-- `examples/` — standalone Vite apps demonstrating usage (`simple`,
-  `better-redux`, `nextjs-todo`) plus `code-snippets.local/` (untracked scratch
-  snippets used while writing docs, not part of any workspace build).
+- `examples/` (standalone Vite/Next.js apps demonstrating usage: `todo-minimal`,
+  `todo-structured-style`, `todo-structured-style-nextjs`,
+  `checkout-structured-style-react-query`, `checkout-minimal-style-react-query`)
+  plus `code-snippets.local/` (untracked scratch snippets used while writing
+  docs, not part of any workspace build).
 
 This is a Deno project (`deno.json` at root defines the workspace: `core`,
 `plugins`, `react`, `examples/*`, `scripts`). `docs/` is plain content, not a
@@ -107,47 +109,46 @@ from directly.
 
 ## Architecture
 
-### Layering: `createStore` → `withPlugins` → `derive`
+### Layering: `createStore` (with `.use()` built in), then `derive`
 
-- **`createStore(initialState)`** (`core/create-store.ts`) is the minimal
-  primitive: `get()`, `set(next | updater)`, `subscribe(listener)`. `set` does a
-  `Object.is` check and skips notification if unchanged. Stores are tagged with
-  an internal `IS_STORE` symbol so `withPlugins` can detect an already-created
-  store vs. a plain initial state.
-
-- **`withPlugins(storeOrInitialState)`** (`core/with-plugins.ts`) upgrades a
-  store (or creates one) with `.use(plugin)` / `.use(namespace, plugin)`. This
-  is where most of the type-level complexity lives. Key mechanics:
-  - A **plugin** (`StorePlugin`) can contribute `reducers`, `middleware`,
-    `methods`, `onActivated`, `onDestroy`.
-  - `reducers` become `store.dispatch.<name>(...)` (or
-    `store.dispatch.<namespace>.<name>(...)`); dispatch runs pure
-    `(state, ...args) => nextState` reducers through the middleware pipeline and
-    calls the underlying `store.set`. Duplicate top-level reducer names throw.
-  - `middleware` is synchronous, chained via `next()` (see `runMiddlewares`, a
-    small onion/dfs dispatcher), and can short-circuit by returning a new state
-    or abort via the `CANCELED` sentinel. Calling `next()` twice throws.
-  - `methods` are arbitrary functions (sync or async) attached to the store (or
-    `store.<namespace>`), with full access to `get`/`set`/`dispatch`. A plugin's
-    own methods aren't visible to its own `methods` factory (they're attached
-    after the factory runs) — reference them as plain functions instead if
-    needed.
-  - Namespacing: passing a string as the first arg to `.use()` nests that
-    plugin's reducers under `store.dispatch.<ns>` and methods under
-    `store.<ns>`; namespace collisions throw.
-  - Only one dispatch can be in flight at a time (`isDispatching` guard) — a
-    reducer/middleware that dispatches another action synchronously will throw.
-  - `destroy()` is idempotent, runs plugins' `onDestroy` callbacks, then makes
-    `get`/`set`/`subscribe`/dispatched actions/methods throw.
-  - Reducer/method/middleware type inference (`InferActions`, `Flatten`,
-    `MergeReducers`, `MiddlewareContextUnion`, etc.) is intentionally heavy —
-    when adding new plugin capabilities, follow the existing
-    generic-accumulation pattern (`TStoreReducers`/`TStoreMethods` threaded
-    through each `.use()` call) rather than introducing a new mechanism.
-    `Flatten`, `UnionToIntersection`, and `MergeReducers` are module-private;
-    plugin authors who need to name the store type seen inside their own
-    `methods`/`onActivated`/`onDestroy` (e.g. for a standalone helper function)
-    use the exported `PluginStore` instead.
+- **`createStore(initialState)`** (`core/create-store.ts`) is the whole
+  primitive: `get()`, `set(next | updater)`, `merge(partial | updater)`,
+  `subscribe(listener)`, `destroy()`, and `.use(plugin)` /
+  `.use(namespace, plugin)`. There is no separate `withPlugins` step; every
+  store gets `.use()` for free. Key mechanics:
+  - A **plugin** (`StorePlugin`) is a plain object of methods plus optional
+    `onActivated`/`onDestroy` lifecycle hooks. No `reducers`, `middleware`, or
+    factory `store` parameter; every method (and `onActivated`/`onDestroy`)
+    reaches the store through `this`, real and runtime-bound (via
+    `Function.prototype.apply`), not just a type-level convenience. Only
+    regular `method() {}` syntax gets this binding; arrow-function-valued
+    methods don't rebind `this`.
+  - Methods are attached directly to the store (`store.<name>(...)`) or, when
+    registered with a namespace, to `store.<namespace>.<name>(...)`.
+    Duplicate top-level or namespaced method names throw.
+  - There is deliberately no action tracing: no middleware pipeline and no
+    ambient `currentAction()`. Both were tried. `currentAction()` had one
+    consumer (`devtools`) and leaked in async methods (lost after an `await`),
+    nested methods, and listener-triggered writes, so it was removed. `devtools`
+    sends every change as `"@@CHANGE"`. If naming is needed again, add an
+    explicit optional label to `set`/`merge` passed to listeners (as Zustand's
+    devtools does) rather than reviving ambient state.
+  - `destroy()` is idempotent, runs plugins' `onDestroy` callbacks in
+    registration order, then makes `get`/`set`/`merge`/`subscribe`/`use`/every
+    method throw.
+  - A parameterized plugin factory (e.g. `persist(options)`) still declares
+    its return type as `StorePlugin<TState, TStoreMethods, TNamespace,
+    TPluginMethods>` (a union of the plain-object `PluginBody` shape and the
+    function-taking `StorePluginFactory` shape) purely so `TState` infers
+    correctly at the `.use()` call site, even though every official plugin's
+    implementation just returns a plain object. See `core/create-store.ts`'s
+    `StorePlugin`/`StorePluginFactory`/`PluginBody` JSDoc for the full
+    reasoning if extending this pattern. Note: because `PluginBody`'s
+    `ThisType` marker carries no structural members of its own, a plugin with
+    *only* `onActivated`/`onDestroy` (both optional) is trivially compatible
+    with any `TStoreMethods`, so "require another plugin to be registered
+    first" constraints only actually get enforced by TypeScript when the
+    plugin also contributes at least one real (non-optional) method.
 
 - **`derive(compute)`** (`core/derive.ts`) creates a read-only store computed
   from other stores. Dependencies are auto-tracked per-recompute via the
@@ -161,11 +162,14 @@ from directly.
 ### Plugins package conventions
 
 Official plugins (`plugins/*.ts`) are built entirely on the public
-`@kintools/store-core` API — they don't reach into core internals. Each plugin
-exports its options type, a factory function (e.g. `persist(options)`) returning
-a `StorePlugin`, and typically uses `getPluginDispatch(store, namespace)` to
-locate its own dispatch actions when namespaced. `immer.ts` is the only plugin
-with an npm dependency (`immer`, declared in `plugins/deno.json` imports).
+`@kintools/store-core` API, they don't reach into core internals. Each plugin
+exports its options type and a factory function (e.g. `persist(options)`)
+returning a `StorePlugin`, whose methods reach the store via `this`.
+`immer.ts` is the only plugin with an npm dependency (`immer`, declared in
+`plugins/deno.json` imports); it wraps a plugin's own methods individually
+(`fn.apply(asImmerStore(this), args)`) so `this.set` accepts an Immer recipe
+instead of a full state replacement, since plugin methods have no `store`
+reference of their own to substitute in one place.
 
 ### React bindings
 

@@ -3,21 +3,18 @@
  * against Zustand, Redux Toolkit, Jotai, and MobX, all mounted into a real
  * (Happy DOM) React tree via @testing-library/react, using one shared state
  * shape and update plan (see `speed/scenario.ts`) so every library does the
- * exact same work. Kin Store appears twice: once on the plain `createStore`
- * tier (`store.set(updater)`, comparable to Zustand/Jotai/MobX's own
- * direct-mutation APIs) and once on the `withPlugins`/`dispatch` tier
- * (comparable to Redux's dispatch/reducer shape) — see
- * `speed/kin-store.harness.tsx` and `speed/kin-store-dispatch.harness.tsx`.
- * Run from the repo root:
+ * exact same work. Kin Store is measured via `store.set(updater)`,
+ * comparable to Zustand/Jotai/MobX's own direct-mutation APIs; see
+ * `speed/kin-store.harness.tsx`. Run from the repo root:
  *
  *   deno task --cwd scripts speed-bench
  *
  * (`scripts/` keeps its own deno.json rather than being a workspace member
- * proper — see `bundle-size.ts`'s module comment for why.)
+ * proper, see `bundle-size.ts`'s module comment for why.)
  *
  * Every number here is Happy DOM (JS-only, no layout/paint), a proxy for
  * each library's own state-management overhead, not a browser-realistic
- * timing. This isn't published anywhere (no docs/README page quotes it) — it
+ * timing. This isn't published anywhere (no docs/README page quotes it), it
  * exists purely to get a rough sense of how @kintools/store-react's overhead
  * compares to the libraries in the comparison page. Numbers will shift as
  * dependencies update; reproduce locally before drawing conclusions from
@@ -38,7 +35,6 @@ const window = new Window({ url: "http://localhost/" });
 (globalThis as any).navigator = window.navigator;
 
 import { kinStoreHarness } from "./speed/kin-store.harness.tsx";
-import { kinStoreDispatchHarness } from "./speed/kin-store-dispatch.harness.tsx";
 import { zustandHarness } from "./speed/zustand.harness.tsx";
 import { reduxHarness } from "./speed/redux.harness.tsx";
 import { jotaiHarness } from "./speed/jotai.harness.tsx";
@@ -53,7 +49,6 @@ import {
 
 const harnesses: SpeedHarness[] = [
   kinStoreHarness,
-  kinStoreDispatchHarness,
   zustandHarness,
   reduxHarness,
   jotaiHarness,

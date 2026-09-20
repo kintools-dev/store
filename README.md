@@ -11,8 +11,9 @@ Start with a plain store. Add structure only when the app earns it.
 
 Most state libraries pick your architecture before you know if the app needs
 one: actions, reducers, selectors, a provider tree, decided on day one. Kin
-Store leaves that decision to you: `set` and `dispatch` are equally first-class,
-not a beginner tier and an advanced one.
+Store leaves that decision to you: one function, `createStore`, gets you
+`get`/`set`/`merge`/`subscribe`, and `.use()` adds methods, namespacing, and
+lifecycle hooks only when you reach for them.
 
 ## Docs
 
@@ -22,18 +23,18 @@ not a beginner tier and an advanced one.
 
 |                           | **Kin Store** | Zustand | Redux / RTK | Jotai  |  MobX   |
 | ------------------------- | :-----------: | :-----: | :---------: | :----: | :-----: |
-| Bundle size (React usage) |    2.0 KB     |  389 B  |   17.5 KB   | 4.0 KB | 15.6 KB |
+| Bundle size (React usage) |    1.6 KB     |  389 B  |   17.5 KB   | 4.0 KB | 15.6 KB |
 | Zero dependencies         |      ✅       |   ✅    |     ❌      |   ✅   |   ✅    |
 | Tiny footprint            |      ✅       |   ✅    |     ❌      |   ✅   |   ❌    |
 | 100% type-safe            |      ✅       |   ⚠️    |     ⚠️      |   ✅   |   ✅    |
 | Low boilerplate           |      ✅       |   ⚠️    |     ❌      |   ⚠️   |   ⚠️    |
-| Linear plugin composition |      ✅       |   ❌    |     ❌      |   —    |    —    |
-| Separate state and logic  |      ✅       |   ❌    |     ✅      |   —    |   ✅    |
+| Linear plugin composition |      ✅       |   ❌    |     ❌      |  n/a   |   n/a   |
+| Separate state and logic  |      ✅       |   ❌    |     ✅      |  n/a   |   ✅    |
 | Opt-in complexity         |      ✅       |   ✅    |     ❌      |   ⚠️   |   ❌    |
 | No hidden magic           |      ✅       |   ✅    |     ✅      |   ✅   |   ❌    |
 | Reactive composition      |      ✅       |   ⚠️    |     ❌      |   ✅   |   ✅    |
 
-✅ full support · ⚠️ partial or conditional · — not applicable (different model)
+✅ full support · ⚠️ partial or conditional · n/a not applicable (different model)
 
 Bundle sizes are each library's full package import, bundled with rolldown,
 minified, and gzipped; tree-shaking down to only the APIs you use will land
@@ -42,14 +43,15 @@ smaller across the board.
 Don't believe it?
 [See full comparison with code examples →](https://kinstore.dev/comparison)
 
-Kin Store is pay-per-use: import only `createStore` and pay 231 B. Import
-`withPlugins` and pay 1.0 KB. The plugin bundles (`persist`, `history`, `immer`)
-add only what you import.
+Kin Store is pay-per-use: import only `createStore` and pay 592 B, methods,
+namespacing, and lifecycle hooks included. Import `derive` and pay another
+460 B. The plugin bundles (`persist`, `history`, `immer`) add only what you
+import.
 
 ## Packages
 
-| Package                                          | Description                                                  |
-| ------------------------------------------------ | ------------------------------------------------------------ |
-| [`@kintools/store-core`](./core/README.md)       | `createStore`, `withPlugins`, `derive` — the core primitives |
-| [`@kintools/store-plugins`](./plugins/README.md) | `persist`, `history`, `immer` — official plugins             |
-| [`@kintools/store-react`](./react/README.md)     | `useStore`, `useSelector` — React bindings                   |
+| Package                                          | Description                                             |
+| ------------------------------------------------ | --------------------------------------------------------- |
+| [`@kintools/store-core`](./core/README.md)       | `createStore`, `derive`: the core primitives             |
+| [`@kintools/store-plugins`](./plugins/README.md) | `persist`, `history`, `immer`: official plugins           |
+| [`@kintools/store-react`](./react/README.md)     | `useStore`, `useSelector`: React bindings                 |

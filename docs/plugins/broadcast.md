@@ -6,26 +6,25 @@ description: "The broadcast plugin syncs a store's entire state across browser t
 
 Syncs a store's entire state across browser tabs using `BroadcastChannel`.
 Unlike [`persist`](/store/plugins/persist), it never touches storage: every
-change is broadcast to other tabs directly, and applying one back travels
-through the reducer pipeline via an internal `_apply` reducer so middlewares can
-observe it. A tab opened after others requests the current state on activation,
-so it doesn't have to wait for the next change to catch up.
+change is broadcast to other tabs directly, and an incoming state is applied
+via `this.set()`. A tab opened after others requests the current state on
+activation, so it doesn't have to wait for the next change to catch up.
 
 ## Basic usage
 
 ```ts
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { broadcast } from "@kintools/store-plugins";
 
-const store = withPlugins({ items: [] as string[] })
+const store = createStore({ items: [] as string[] })
   .use({
-    reducers: {
-      add: (state, item: string) => ({ items: [...state.items, item] }),
+    add(item: string): void {
+      this.merge((s) => ({ items: [...s.items, item] }));
     },
   })
   .use("broadcast", broadcast({ name: "todos" }));
 
-store.dispatch.add("hello"); // seen by other tabs sharing the "todos" channel
+store.add("hello"); // seen by other tabs sharing the "todos" channel
 ```
 
 ## Plugin methods
@@ -37,7 +36,7 @@ store.dispatch.add("hello"); // seen by other tabs sharing the "todos" channel
 ## Options
 
 | Option | Type     | Description                                                          |
-| ------ | -------- | -------------------------------------------------------------------- |
+| ------ | -------- | ---------------------------------------------------------------------- |
 | `name` | `string` | The `BroadcastChannel` name. Only stores sharing the same name sync. |
 
 ```ts
@@ -47,10 +46,10 @@ store.dispatch.add("hello"); // seen by other tabs sharing the "todos" channel
 ## Conflict resolution
 
 Conflicts are resolved last-write-wins by wall-clock time: if two tabs change
-state within the same millisecond, one of the changes is silently dropped. For
-state that genuinely needs conflict resolution (concurrent edits merged rather
-than one replacing the other), broadcast the specific operations instead of the
-whole state, or reach for a CRDT library.
+state within the same millisecond, one of the changes is silently dropped.
+For state that genuinely needs conflict resolution (concurrent edits merged
+rather than one replacing the other), broadcast the specific operations
+instead of the whole state, or reach for a CRDT library.
 
 ## Composing with persist
 
@@ -59,22 +58,7 @@ whole state, or reach for a CRDT library.
 immediately without waiting on a storage write.
 
 ```ts
-const store = withPlugins({ items: [] as string[] })
+const store = createStore({ items: [] as string[] })
   .use("persist", persist({ key: "todos" }))
   .use("broadcast", broadcast({ name: "todos" }));
-```
-
-## Inside middleware
-
-The plugin uses an internal `_apply` reducer to change state, so every incoming
-update from another tab travels through the middleware pipeline. A logging
-middleware will see it:
-
-```ts
-middleware: () => (ctx, next) => {
-  // Includes "broadcast._apply", assuming the plugin is registered under
-  // the "broadcast" namespace.
-  console.log(ctx.reducer.name);
-  return next();
-},
 ```

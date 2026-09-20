@@ -11,18 +11,18 @@ accepted, including async ones.
 ## Basic usage
 
 ```ts
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { persist } from "@kintools/store-plugins";
 
-const store = withPlugins({ count: 0 })
+const store = createStore({ count: 0 })
   .use({
-    reducers: {
-      increment: (state, n: number) => ({ count: state.count + n }),
+    increment(n: number): void {
+      this.merge((s) => ({ count: s.count + n }));
     },
   })
   .use("persist", persist({ key: "my-counter" }));
 
-store.dispatch.increment(1);
+store.increment(1);
 // State is automatically saved to localStorage['my-counter'].
 // On the next page load, it is restored automatically.
 ```
@@ -67,10 +67,10 @@ const asyncStorage: PersistStorage = {
 .use('persist', persist({ key: 'data', storage: asyncStorage }))
 ```
 
-## SSR — skip auto-hydration
+## SSR: skip auto-hydration
 
-When rendering server-side, skip the automatic hydration and trigger it manually
-on the client:
+When rendering server-side, skip the automatic hydration and trigger it
+manually on the client:
 
 ```ts
 .use('persist', persist({ key: 'user', skipHydration: true }))
@@ -84,7 +84,7 @@ await store.persist.hydrate();
 Once registered under a namespace (e.g. `'persist'`), the plugin exposes:
 
 | Method                    | Description                                                           |
-| ------------------------- | --------------------------------------------------------------------- |
+| ------------------------- | ----------------------------------------------------------------------- |
 | `hydrate()`               | Triggers a hydration; returns the in-progress hydration if one exists |
 | `hasHydrated()`           | Returns `true` if at least one hydration has completed                |
 | `hydrationComplete()`     | Returns a promise that resolves after the current or next hydration   |
@@ -98,10 +98,14 @@ After async hydration completes, call `history.rebase()` so undo doesn't step
 back to the pre-hydration state:
 
 ```ts
-const store = withPlugins({ items: [] as string[] })
+const store = createStore({ items: [] as string[] })
   .use("persist", persist({ key: "items" }))
   .use("history", history())
-  .use({ reducers: { add: (s, t: string) => ({ items: [...s.items, t] }) } });
+  .use({
+    add(item: string): void {
+      this.merge((s) => ({ items: [...s.items, item] }));
+    },
+  });
 
 await store.persist.hydrationComplete();
 store.history.rebase();
@@ -110,10 +114,10 @@ store.history.rebase();
 ## Options
 
 | Option          | Type                         | Default        | Description                         |
-| --------------- | ---------------------------- | -------------- | ----------------------------------- |
-| `key`           | `string`                     | required       | Storage key                         |
-| `storage`       | `PersistStorage`             | `localStorage` | Storage backend                     |
-| `selector`      | `(state) => partial`         | full state     | Slice to persist                    |
-| `version`       | `number`                     | `0`            | Schema version for migrations       |
-| `migrate`       | `(stored, version) => state` | `undefined`    | Migration function                  |
-| `skipHydration` | `boolean`                    | `false`        | Skip auto-hydration on registration |
+| --------------- | ----------------------------- | -------------- | ------------------------------------ |
+| `key`           | `string`                      | required       | Storage key                          |
+| `storage`       | `PersistStorage`               | `localStorage` | Storage backend                      |
+| `selector`      | `(state) => partial`          | full state     | Slice to persist                     |
+| `version`       | `number`                       | `0`            | Schema version for migrations        |
+| `migrate`       | `(stored, version) => state`  | `undefined`    | Migration function                   |
+| `skipHydration` | `boolean`                      | `false`        | Skip auto-hydration on registration  |

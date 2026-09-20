@@ -1,9 +1,4 @@
-import {
-  CANCELED,
-  type NestedMethods,
-  type NestedReducers,
-  type StorePlugin,
-} from "@kintools/store-core";
+import type { NestedMethods, StorePlugin } from "@kintools/store-core";
 
 type DispatchMessage = {
   type: "DISPATCH";
@@ -50,8 +45,8 @@ export type DevtoolsOptions = {
    * The name shown in the Redux DevTools extension instance selector.
    * Defaults to `"kin-store"`.
    *
-   * Names do not need to be unique — the extension tracks instances by
-   * connection, not name — but duplicate names make the selector ambiguous
+   * Names do not need to be unique (the extension tracks instances by
+   * connection, not name), but duplicate names make the selector ambiguous
    * when multiple stores are registered. Use a distinct name per store.
    */
   name?: string;
@@ -66,23 +61,23 @@ export type DevtoolsOptions = {
  * extension owns the history timeline and diff UI; the plugin only needs to
  * keep them in sync.
  *
- * **Setup** — Install the browser extension, then register the plugin. No
- * namespace is required because the plugin adds no public methods or reducers:
+ * **Setup**: Install the browser extension, then register the plugin. No
+ * namespace is required because the plugin adds no public methods:
  *
  * ```ts
- * const store = withPlugins(0)
+ * const store = createStore(0)
  *   .use({
- *     reducers: {
- *       increment: (state, n: number) => state + n,
+ *     increment(n: number): void {
+ *       this.set((s) => s + n);
  *     },
  *   })
  *   .use(devtools({ name: "counter" }));
  * ```
  *
- * **Production** — The plugin is a no-op when the extension is absent, so it
+ * **Production**: The plugin is a no-op when the extension is absent, so it
  * is safe to leave in production code. To eliminate it from the bundle
  * entirely, use a ternary with your bundler's dev-mode flag. The bundler
- * replaces the flag with `false`, collapses the ternary to `{}`, and
+ * replaces the flag with `false`, collapses the ternary to a no-op, and
  * tree-shakes the `devtools` import:
  *
  * ```ts
@@ -93,12 +88,10 @@ export type DevtoolsOptions = {
  * .use(process.env.NODE_ENV !== "production" ? devtools() : {})
  * ```
  *
- * **State changes forwarded to the extension**
- *
- * | Source                         | Action type sent              |
- * | ------------------------------ | ----------------------------- |
- * | `store.dispatch.name(...args)` | `"name"` with `payload: args` |
- * | `store.set(...)`               | `"@@SET"`                     |
+ * **State changes forwarded to the extension**: every change is sent as an
+ * `"@@CHANGE"` action together with the new state. The extension's diff view
+ * shows what changed; the store doesn't track which call made the change, so
+ * changes are not labeled by method name.
  *
  * **Supported panel actions**
  *
@@ -114,19 +107,17 @@ export type DevtoolsOptions = {
  * replaying individual actions rather than restoring snapshots.
  *
  * @template TState The store's state type.
- * @template TStoreReducers Reducers already on the store before this plugin is registered.
  * @template TStoreMethods Methods already on the store before this plugin is registered.
  * @template TNamespace The namespace passed to `store.use(namespace, devtools())`,
  * or `undefined` for top-level. Inferred automatically.
  */
 export function devtools<
   TState,
-  TStoreReducers extends NestedReducers<TState>,
   TStoreMethods extends NestedMethods,
   TNamespace extends string | undefined,
 >(
   options?: DevtoolsOptions,
-): StorePlugin<TState, TStoreReducers, TStoreMethods, TNamespace> {
+): StorePlugin<TState, TStoreMethods, TNamespace> {
   const ext: Extension | undefined =
     // deno-lint-ignore no-explicit-any
     (globalThis as any).__REDUX_DEVTOOLS_EXTENSION__;
@@ -136,40 +127,25 @@ export function devtools<
   const connection = ext.connect<TState>({
     name: options?.name ?? "kin-store",
   });
-  let pendingAction: { type: string; payload: unknown[] } | undefined;
   let isFromDevtools = false;
 
   return {
-    // Records the action before store.set() fires subscribers.
-    middleware: () => (ctx, next) => {
-      const result = next();
-      if (result !== CANCELED) {
-        pendingAction = {
-          type: String(ctx.reducer.name),
-          payload: ctx.reducer.args as unknown[],
-        };
-      }
-      return result;
-    },
-
-    onActivated: (store) => {
-      const initialState = store.get();
+    onActivated() {
+      const initialState = this.get();
       let committedState = initialState;
 
       connection.init(initialState);
 
-      store.subscribe((get) => {
+      this.subscribe(() => {
         if (isFromDevtools) return;
-
-        connection.send(pendingAction ?? { type: "@@SET" }, get());
-        pendingAction = undefined;
+        connection.send({ type: "@@CHANGE" }, this.get());
       });
 
-      function restoreState(state: TState): void {
+      const restoreState = (state: TState): void => {
         isFromDevtools = true;
-        store.set(state);
+        this.set(state);
         isFromDevtools = false;
-      }
+      };
 
       connection.subscribe((message) => {
         if (message.type !== "DISPATCH") return;
@@ -185,7 +161,7 @@ export function devtools<
             connection.init(initialState);
             break;
           case "COMMIT":
-            committedState = store.get();
+            committedState = this.get();
             connection.init(committedState);
             break;
           case "ROLLBACK":
@@ -203,7 +179,7 @@ export function devtools<
       });
     },
 
-    onDestroy: () => {
+    onDestroy() {
       connection.unsubscribe?.();
     },
   };

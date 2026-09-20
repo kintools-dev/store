@@ -8,36 +8,10 @@ React bindings for `@kintools/store-core`.
 
 ## Install
 
-<CodeGroup>
-
-<CodeGroupItem label="npm">
-
-```sh
-npm add @kintools/store-react
-```
-
-</CodeGroupItem>
-
-<CodeGroupItem label="pnpm">
-
-```sh
-pnpm add @kintools/store-react
-```
-
-</CodeGroupItem>
-
-<CodeGroupItem label="deno">
-
-```sh
-deno add jsr:@kintools/store-react
-```
-
-</CodeGroupItem>
-
-`@kintools/store-react` depends on and re-exports everything from
-`@kintools/store-core`, so no need to install it separately.
-
-</CodeGroup>
+`npm add @kintools/store-react` (or your package manager's equivalent); see
+[Getting Started](/store/guide/getting-started#react) for every package
+manager. It depends on and re-exports everything from `@kintools/store-core`,
+so no need to install that separately.
 
 ## `useStore`
 
@@ -55,7 +29,8 @@ function Counter(): JSX.Element {
 }
 ```
 
-Works with any store, `createStore`, `withPlugins`, or `derive`:
+Works with any store: a bare `createStore`, one extended with `.use()`, or a
+`derive` store:
 
 ```tsx
 const summary = derive((get) => ({
@@ -67,7 +42,7 @@ function Header() {
   const { greeting, itemCount } = useStore(summary);
   return (
     <header>
-      {greeting} — {itemCount} items
+      {greeting}: {itemCount} items
     </header>
   );
 }
@@ -130,15 +105,15 @@ avoid module-level singletons:
 
 ```tsx
 import {
+  createStore,
   StoreProvider,
   useStore,
   useStoreContext,
-  withPlugins,
 } from "@kintools/store-react";
 
-const store = withPlugins(0).use({
-  reducers: {
-    increment: (state, n: number) => state + n,
+const store = createStore(0).use({
+  increment(n: number): void {
+    this.set((s) => s + n);
   },
 });
 
@@ -156,7 +131,7 @@ function Counter(): JSX.Element {
   const store = useStoreContext<Store>();
   const count = useStore(store);
 
-  return <button onClick={() => store.dispatch.increment(1)}>{count}</button>;
+  return <button onClick={() => store.increment(1)}>{count}</button>;
 }
 ```
 
@@ -164,13 +139,12 @@ function Counter(): JSX.Element {
 
 ## Actions are stable refs
 
-Methods and dispatch functions on a `withPlugins` store are stable references,
-they don't change between renders. You can call them directly without
-subscribing:
+Methods registered with `.use()` are stable references, they don't change
+between renders. You can call them directly without subscribing:
 
 ```tsx
 function AddButton() {
-  // No useStore/useSelector needed — just call the method directly.
+  // No useStore/useSelector needed: just call the method directly.
   return <button onClick={() => todoStore.addTodo("new item")}>Add</button>;
 }
 ```

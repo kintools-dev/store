@@ -1,5 +1,5 @@
 ---
-description: "The devtools plugin connects a store to the Redux DevTools Extension for time-travel debugging: state inspection, action replay, and jump-to-state."
+description: "The devtools plugin connects a store to the Redux DevTools Extension for time-travel debugging: state inspection, jump-to-state, and reset/commit/rollback."
 ---
 
 # devtools
@@ -11,16 +11,16 @@ time-travel debugging.
 ## Setup
 
 Install the browser extension, then register the plugin. No namespace is
-required because the plugin adds no public methods or reducers:
+required because the plugin adds no public methods:
 
 ```ts
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { devtools } from "@kintools/store-plugins";
 
-const store = withPlugins(0)
+const store = createStore(0)
   .use({
-    reducers: {
-      increment: (state, n: number) => state + n,
+    increment(n: number): void {
+      this.set((s) => s + n);
     },
   })
   .use(devtools({ name: "counter" }));
@@ -51,12 +51,10 @@ tree-shakes the `devtools` import.
 
 ## State changes
 
-Every state change is forwarded to the extension automatically.
-
-| Source                         | Action type sent              |
-| ------------------------------ | ----------------------------- |
-| `store.dispatch.name(...args)` | `"name"` with `payload: args` |
-| `store.set(...)`               | `"@@SET"`                     |
+Every state change is forwarded to the extension automatically as an
+`"@@CHANGE"` action with the new state. The extension's diff view shows what
+changed. The store doesn't track which call made a change, so changes are not
+labeled by method name.
 
 ## Supported panel actions
 

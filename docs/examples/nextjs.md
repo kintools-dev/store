@@ -7,24 +7,24 @@ description: "A Next.js App Router todo app showing what SSR changes about using
 A todo app on the App Router, demonstrating the two things SSR changes about
 using a store: where the instance lives, and when `persist` is allowed to touch
 `localStorage`. Full source in
-[`examples/todo-redux-style-nextjs`](https://github.com/kintools-dev/store/tree/main/examples/todo-redux-style-nextjs).
+[`examples/todo-structured-style-nextjs`](https://github.com/kintools-dev/store/tree/main/examples/todo-structured-style-nextjs).
 
 ## The store
 
 ```ts
 // lib/store.ts
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { immer, persist } from "@kintools/store-plugins";
 
 export type Filter = "all" | "active" | "done";
 export type Todo = { id: number; text: string; done: boolean };
 export type TodoState = { items: Todo[]; filter: Filter };
 
-// Factory so each client render gets its own store instance — no shared
+// Factory so each client render gets its own store instance: no shared
 // state between SSR requests. Provided to the component tree via
 // StoreProvider.
 export function createTodoStore() {
-  return withPlugins<TodoState>({ items: [], filter: "all" })
+  return createStore<TodoState>({ items: [], filter: "all" })
     .use(
       "persist",
       persist({
@@ -38,23 +38,31 @@ export function createTodoStore() {
     )
     .use(
       immer({
-        reducers: {
-          addTodo(draft, text: string) {
+        addTodo(text: string): void {
+          this.set((draft) => {
             draft.items.push({ id: Date.now(), text, done: false });
-          },
-          toggleTodo(draft, id: number) {
+          });
+        },
+        toggleTodo(id: number): void {
+          this.set((draft) => {
             const item = draft.items.find((it) => it.id === id);
             if (item) item.done = !item.done;
-          },
-          removeTodo(draft, id: number) {
+          });
+        },
+        removeTodo(id: number): void {
+          this.set((draft) => {
             draft.items = draft.items.filter((it) => it.id !== id);
-          },
-          clearDone(draft) {
+          });
+        },
+        clearDone(): void {
+          this.set((draft) => {
             draft.items = draft.items.filter((it) => !it.done);
-          },
-          setFilter(draft, filter: Filter) {
+          });
+        },
+        setFilter(filter: Filter): void {
+          this.set((draft) => {
             draft.filter = filter;
-          },
+          });
         },
       }),
     );
@@ -64,9 +72,9 @@ export type TodoStore = ReturnType<typeof createTodoStore>;
 ```
 
 It's a factory function, not a module-level singleton. A module-level store
-would be shared across every SSR request handled by the same server process —
-one user's todos leaking into another's response. `createTodoStore()` gives each
-render its own instance instead.
+would be shared across every SSR request handled by the same server process,
+one user's todos leaking into another's response. `createTodoStore()` gives
+each render its own instance instead.
 
 `persist` is configured with `skipHydration: true` because `localStorage`
 doesn't exist on the server. Hydration is triggered explicitly on the client
@@ -121,7 +129,7 @@ export default function RootLayout({
 }
 ```
 
-`page.tsx` itself stays a Server Component — only the leaf components that
+`page.tsx` itself stays a Server Component; only the leaf components that
 actually read or write the store need `"use client"`:
 
 ```tsx
@@ -144,7 +152,7 @@ export default function Page() {
 ## Reading and writing from a component
 
 Client components pull the store out of context with `useStoreContext`, then use
-`useStore`/`useSelector` and `dispatch` as usual:
+`useStore`/`useSelector` and call methods on the store directly, as usual:
 
 ```tsx
 // app/components/TodoList.tsx
@@ -161,10 +169,10 @@ function TodoItem({ item }: { item: Todo }) {
       <input
         type="checkbox"
         checked={item.done}
-        onChange={() => store.dispatch.toggleTodo(item.id)}
+        onChange={() => store.toggleTodo(item.id)}
       />
       <span>{item.text}</span>
-      <button onClick={() => store.dispatch.removeTodo(item.id)}>×</button>
+      <button onClick={() => store.removeTodo(item.id)}>×</button>
     </li>
   );
 }

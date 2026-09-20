@@ -3,12 +3,12 @@ import { Window } from "happy-dom";
 import { act, renderHook } from "@testing-library/react";
 import { assertEquals, assertThrows } from "@std/assert";
 
-import { createStore, derive, withPlugins } from "@kintools/store-core";
+import { createStore, derive } from "@kintools/store-core";
 import { useSelector, useStore } from "./hooks.ts";
 import { StoreProvider, useStoreContext } from "./context.tsx";
 
 // ---------------------------------------------------------------------------
-// DOM setup — required for React rendering
+// DOM setup: required for React rendering
 // ---------------------------------------------------------------------------
 
 const window = new Window({ url: "http://localhost/" });
@@ -186,7 +186,7 @@ Deno.test(
 // ---------------------------------------------------------------------------
 
 Deno.test("useStoreContext - returns the provided store", () => {
-  const store = withPlugins({ count: 0 });
+  const store = createStore({ count: 0 });
 
   const { result } = renderHook(() => useStoreContext(), {
     wrapper: ({ children }) => (

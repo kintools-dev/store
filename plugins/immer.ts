@@ -1,129 +1,70 @@
+// deno-lint-ignore-file ban-types
 import type {
+  LifecycleHooks,
   Methods,
   NestedMethods,
-  NestedReducers,
-  PluginContext,
-  PluginStore,
-  SkipFirst,
+  PluginBody,
+  Store,
   StorePlugin,
-  StoreWithPlugins,
 } from "@kintools/store-core";
 
 import { type Draft, produce } from "immer";
 
-// deno-lint-ignore no-explicit-any
-type ImmerReducer<TState, TArgs extends any[] = any[]> = (
-  draft: Draft<TState>,
-  ...args: TArgs
-) => void;
-
-type ImmerReducers<TState> = Record<string, ImmerReducer<TState>>;
-
-type ToStandardReducer<TState, TImmerReducer extends ImmerReducer<TState>> = (
-  state: TState,
-  ...args: SkipFirst<TState, Parameters<TImmerReducer>>
-) => TState;
-
-type ToStandardReducers<
-  TState,
-  TImmerReducers extends ImmerReducers<TState>,
-> = {
-  [K in keyof TImmerReducers]: ToStandardReducer<TState, TImmerReducers[K]>;
-};
-
-type ImmerStore<
-  TState,
-  TStoreReducers extends NestedReducers<TState>,
-  TStoreMethods extends NestedMethods,
-  TNamespace extends string | undefined = undefined,
-  // deno-lint-ignore ban-types
-  TPluginReducers extends ImmerReducers<TState> = {},
-  // deno-lint-ignore ban-types
-  TPluginMethods extends Methods = {},
-> =
-  & Omit<
-    PluginStore<
-      TState,
-      TStoreReducers,
-      TStoreMethods,
-      TNamespace,
-      ToStandardReducers<TState, TPluginReducers>,
-      TPluginMethods
-    >,
-    "set"
-  >
+/**
+ * The store type seen inside an {@linkcode ImmerPlugin}: identical to
+ * {@linkcode Store}, except `set` accepts an Immer recipe
+ * `(draft) => void` instead of a full state replacement.
+ *
+ * Use this for state changes (`this.set((draft) => { draft.x = 1; })`).
+ *
+ * @template TState The store's state type.
+ * @template TStoreMethods The methods already on the store before this
+ * plugin is applied.
+ */
+export type ImmerStore<TState, TStoreMethods extends NestedMethods> =
+  & Omit<Store<TState, TStoreMethods>, "set">
   & {
-    set: (recipe: (draft: Draft<TState>) => void) => void;
+    set(recipe: (draft: Draft<TState>) => void): void;
   };
 
-type ImmerPlugin<
+type WithNamespace<
+  TNamespace extends string | undefined,
+  TPluginMethods extends Methods,
+> = TNamespace extends string ? Record<TNamespace, TPluginMethods>
+  : TPluginMethods;
+
+/**
+ * A plugin written against an {@linkcode ImmerStore} instead of a plain
+ * {@linkcode Store}: `this` inside every method (and `onActivated`/
+ * `onDestroy`) has an Immer-recipe `set`. Pass one to {@linkcode immer} to
+ * get back a standard {@linkcode StorePlugin}.
+ *
+ * @template TState The store's state type.
+ * @template TStoreMethods The methods already on the store before this
+ * plugin is applied.
+ * @template TNamespace The namespace passed to `store.use(namespace, immer(...))`,
+ * or `undefined` for top-level. Inferred automatically.
+ * @template TPluginMethods The methods this plugin contributes. Inferred
+ * automatically.
+ */
+export type ImmerPlugin<
   TState,
-  TStoreReducers extends NestedReducers<TState>,
   TStoreMethods extends NestedMethods,
   TNamespace extends string | undefined,
-  TPluginReducers extends ImmerReducers<TState>,
-  TPluginMethods extends Methods,
+  TPluginMethods extends Methods = {},
 > =
-  & Pick<
-    StorePlugin<
+  & TPluginMethods
+  & LifecycleHooks
+  & ThisType<
+    ImmerStore<
       TState,
-      TStoreReducers,
-      TStoreMethods,
-      TNamespace,
-      ToStandardReducers<TState, TPluginReducers>
-    >,
-    "middleware"
-  >
-  & {
-    /** @see {StorePlugin.onDestroy} */
-    reducers?: { [K in keyof TPluginReducers]: TPluginReducers[K] };
+      TStoreMethods & WithNamespace<TNamespace, TPluginMethods>
+    >
+  >;
 
-    /** @see {StorePlugin.onDestroy} */
-    methods?: (
-      store: ImmerStore<
-        TState,
-        TStoreReducers,
-        TStoreMethods,
-        TNamespace,
-        TPluginReducers
-      >,
-      options: PluginContext<TNamespace>,
-    ) => TPluginMethods;
-
-    /** @see {StorePlugin.onDestroy} */
-    onActivated?: (
-      store: ImmerStore<
-        TState,
-        TStoreReducers,
-        TStoreMethods,
-        TNamespace,
-        TPluginReducers,
-        TPluginMethods
-      >,
-      ctx: PluginContext<TNamespace>,
-    ) => void;
-
-    /** @see {StorePlugin.onDestroy} */
-    onDestroy?: (
-      store: ImmerStore<
-        TState,
-        TStoreReducers,
-        TStoreMethods,
-        TNamespace,
-        TPluginReducers,
-        TPluginMethods
-      >,
-      ctx: PluginContext<TNamespace>,
-    ) => void;
-  };
-
-function asImmerStore<
-  TState,
-  TStoreReducers extends NestedReducers<TState>,
-  TStoreMethods extends NestedMethods,
->(
-  store: StoreWithPlugins<TState, TStoreReducers, TStoreMethods>,
-): ImmerStore<TState, TStoreReducers, TStoreMethods> {
+function asImmerStore<TState, TStoreMethods extends NestedMethods>(
+  store: Store<TState, TStoreMethods>,
+): ImmerStore<TState, TStoreMethods> {
   return {
     ...(store as Omit<typeof store, "set">),
     set: (recipe: (draft: Draft<TState>) => void) =>
@@ -132,173 +73,104 @@ function asImmerStore<
 }
 
 /**
- * Adapter that lets you write reducers (and `set` calls) using
+ * Adapter that lets you write a plugin using
  * [Immer](https://immerjs.github.io/immer/) draft mutations instead of
  * returning new state objects.
  *
- * Pass an {@linkcode ImmerPlugin}-shaped object to `immer()` and the returned
- * value is a standard {@linkcode StorePlugin} whose reducers wrap each Immer
- * reducer with `produce`. The `methods`, `onActivated`, and `onDestroy`
- * callbacks receive an `ImmerStore` where `set` accepts a recipe function
- * `(draft) => void` instead of a full state replacement.
+ * Pass an {@linkcode ImmerPlugin} to `immer()` and the returned value is a
+ * standard {@linkcode StorePlugin} ready for `store.use()`: inside it, `this`
+ * (and the store passed to any of its own helper functions) has a `set` that
+ * accepts a recipe `(draft) => void` instead of a full state replacement.
+ * Every method, `onActivated`, and `onDestroy` is individually wrapped so
+ * `this` resolves to the Immer-flavored store no matter how it's reached
+ * (externally, or via a sibling/earlier-plugin call through `this`).
  *
- * @param plugin An Immer-flavoured plugin definition.
+ * @param plugin A plugin written against an {@linkcode ImmerStore}.
  * @returns A standard {@linkcode StorePlugin} ready to pass to `store.use()`.
  *
- * @example Basic counter with Immer reducers
+ * @example Basic counter with Immer-based methods
  * ```ts
  * import { immer } from "@kintools/store-plugins";
  *
- * const store = withPlugins({ count: 0, items: [] as string[] }).use(
+ * const store = createStore({ count: 0, items: [] as string[] }).use(
  *   immer({
- *     reducers: {
- *       increment(draft, amount: number): void {
+ *     increment(amount: number): void {
+ *       this.set((draft) => {
  *         draft.count += amount;
- *       },
- *       addItem(draft, item: string): void {
- *         draft.items.push(item);
- *       },
+ *       });
  *     },
- *     methods: (store) => ({
- *       reset(): void {
- *         // store.set accepts a recipe too.
- *         store.set((draft) => {
- *           draft.count = 0;
- *           draft.items = [];
- *         });
- *       },
- *     }),
+ *     addItem(item: string): void {
+ *       this.set((draft) => {
+ *         draft.items.push(item);
+ *       });
+ *     },
+ *     reset(): void {
+ *       this.set((draft) => {
+ *         draft.count = 0;
+ *         draft.items = [];
+ *       });
+ *     },
  *   }),
  * );
  *
- * store.dispatch.increment(3);
- * store.dispatch.addItem("hello");
+ * store.increment(3);
+ * store.addItem("hello");
  * store.reset();
  * ```
  *
  * @example Namespaced Immer plugin
  * ```ts
- * const store = withPlugins({ todos: [] as Todo[] }).use(
+ * const store = createStore({ todos: [] as Todo[] }).use(
  *   "todos",
  *   immer({
- *     reducers: {
- *       add(draft, title: string): void {
+ *     add(title: string): void {
+ *       this.set((draft) => {
  *         draft.todos.push({ id: Date.now(), title, done: false });
- *       },
- *       toggle(draft, id: number): void {
+ *       });
+ *     },
+ *     toggle(id: number): void {
+ *       this.set((draft) => {
  *         const todo = draft.todos.find((t) => t.id === id);
  *         if (todo) todo.done = !todo.done;
- *       },
+ *       });
  *     },
  *   }),
  * );
  *
- * store.dispatch.todos.add("Buy milk");
- * store.dispatch.todos.toggle(someId);
+ * store.todos.add("Buy milk");
+ * store.todos.toggle(someId);
  * ```
  *
  * @template TState The store's state type.
- * @template TStoreReducers Reducers already on the store before this plugin is applied.
  * @template TStoreMethods Methods already on the store before this plugin is applied.
  * @template TNamespace The namespace passed to `store.use(namespace, immer(...))`,
  * or `undefined` for top-level. Inferred automatically.
- * @template TPluginReducers The Immer-flavoured reducers contributed by this plugin.
  * @template TPluginMethods The methods contributed by this plugin.
  */
 export function immer<
   TState,
-  TStoreReducers extends NestedReducers<TState>,
   TStoreMethods extends NestedMethods,
   TNamespace extends string | undefined,
-  // deno-lint-ignore ban-types
-  TPluginReducers extends ImmerReducers<TState> = {},
-  // deno-lint-ignore ban-types
   TPluginMethods extends Methods = {},
 >(
-  plugin: ImmerPlugin<
-    TState,
-    TStoreReducers,
-    TStoreMethods,
-    TNamespace,
-    TPluginReducers,
-    TPluginMethods
-  >,
-): StorePlugin<
-  TState,
-  TStoreReducers,
-  TStoreMethods,
-  TNamespace,
-  ToStandardReducers<TState, TPluginReducers>,
-  TPluginMethods
-> {
-  type StandardPluginReducers = ToStandardReducers<TState, TPluginReducers>;
+  plugin: ImmerPlugin<TState, TStoreMethods, TNamespace, TPluginMethods>,
+): StorePlugin<TState, TStoreMethods, TNamespace, TPluginMethods> {
+  const wrapped: Record<string, unknown> = {};
 
-  // Destructure `plugin` so it can be garbage collected.
-  const {
-    reducers: pReducers,
-    methods: pMethods,
-    onActivated: pOnActivated,
-    onDestroy: pOnDestroy,
-    middleware,
-  } = plugin;
-
-  // Convert immer reducers to standard reducers.
-
-  let reducers: StandardPluginReducers | undefined;
-
-  if (pReducers) {
-    reducers = {} as StandardPluginReducers;
-
-    for (const name of Object.keys(pReducers)) {
-      type TName = keyof TPluginReducers;
-
-      const immerReducer = pReducers[name as TName];
-
-      const standardReducer: StandardPluginReducers[TName] = (state, ...args) =>
-        produce(state, (draft) => immerReducer(draft, ...args));
-
-      reducers[name as TName] = standardReducer;
-    }
+  for (const name of Object.keys(plugin)) {
+    const fn = plugin[name];
+    wrapped[name] = function (
+      this: Store<TState, TStoreMethods>,
+      ...args: unknown[]
+    ) {
+      return fn.apply(asImmerStore(this), args);
+    };
   }
 
-  // Wrap methods to provide immer store.
-
-  type ReturnedPlugin = StorePlugin<
+  return wrapped as PluginBody<
     TState,
-    TStoreReducers,
     TStoreMethods,
     TNamespace,
-    StandardPluginReducers,
     TPluginMethods
   >;
-
-  let methods: ReturnedPlugin["methods"] | undefined;
-
-  if (pMethods) {
-    methods = (store, ctx) => pMethods(asImmerStore(store), ctx);
-  }
-
-  // Wrap onActivated to provide immer store.
-
-  let onActivated: ReturnedPlugin["onActivated"] | undefined;
-
-  if (pOnActivated) {
-    onActivated = (store, ctx) => pOnActivated(asImmerStore(store), ctx);
-  }
-
-  // Wrap onDestroy to provide immer store.
-
-  let onDestroy: ReturnedPlugin["onDestroy"] | undefined;
-
-  if (pOnDestroy) {
-    onDestroy = (store, ctx) => pOnDestroy(asImmerStore(store), ctx);
-  }
-
-  return {
-    middleware,
-    reducers,
-    methods,
-    onActivated,
-    onDestroy,
-  };
 }

@@ -1,235 +1,159 @@
 ---
-description: "How to write a StorePlugin: reducers and internal state, middleware, methods, and the onActivated/onDestroy lifecycle hooks."
+description: "How to write a StorePlugin: methods, internal state, lifecycle hooks, this-binding, reusable factory functions, and constraining which stores a plugin targets."
 ---
 
 # Writing Plugins
 
-A `StorePlugin` is a plain object with any combination of `reducers`,
-`middleware`, `methods`, `onActivated`, and `onDestroy`. Plugins can be shared
-and composed independently of the store they are applied to.
+A `StorePlugin` is a plain object of methods plus optional `onActivated` and
+`onDestroy` lifecycle hooks. Plugins can be shared and composed independently
+of the store they are applied to.
 
-## Reducers and internal state
+## Methods and internal state
 
-All changes to the store's primary state (`TState`) should go through a reducer,
-not `set`. Reducers travel through the full middleware pipeline, they can be
-logged, traced, or canceled by any middleware in the chain:
-
-```ts
-// Observe every reducer call, including ones from plugins:
-((ctx, next) => {
-  console.log(ctx.reducer.name); // "history._restore", "persist._restore", ...
-  return next();
-});
-
-// Cancel a specific reducer under a condition:
-((ctx, next) => {
-  if (ctx.reducer.name === "persist._restore" && !auth.isReady()) {
-    return CANCELED;
-  }
-  return next();
-});
-```
-
-`set` bypasses the pipeline by design — use it when you need a hard reset that
-must survive middleware that would otherwise cancel it, or when traceability is
-not a goal.
-
-Plugin-internal bookkeeping — flags, counters, listener sets — lives in closure
-variables, not `TState`.
-
-## Middleware
-
-A plugin can include middleware that runs on every dispatch:
+Every method (and `onActivated`/`onDestroy`) reaches the store through `this`,
+typed as the full store including this plugin's own methods and every earlier
+plugin's:
 
 ```ts
-import { withPlugins } from "@kintools/store-core";
 import type { StorePlugin } from "@kintools/store-core";
 
 type State = { count: number };
 
-const loggingPlugin: StorePlugin<State> = {
-  middleware: () => (ctx, next) => {
-    console.log("->", ctx.reducer.name, ctx.reducer.args);
-    const result = next();
-    console.log("<-", result);
-    return result;
+type CounterMethods = {
+  increment(amount: number): void;
+  incrementTwice(amount: number): void;
+};
+
+const counter: StorePlugin<State, {}, undefined, CounterMethods> = {
+  onActivated() {
+    console.log("activated with", this.get().count);
+  },
+  increment(amount: number): void {
+    this.merge((s) => ({ count: s.count + amount }));
+  },
+  incrementTwice(amount: number): void {
+    this.increment(amount);
+    this.increment(amount);
   },
 };
 
-const store = withPlugins({ count: 0 }).use(loggingPlugin);
+const store = createStore({ count: 0 }).use(counter);
 ```
+
+The explicit `CounterMethods` type argument is needed here: without it, `TPluginMethods` defaults to `{}`, and TypeScript rejects `increment`/`incrementTwice` as excess properties. Assigning the plugin inline to `.use({...})` instead lets `TPluginMethods` infer from the literal, without needing this annotation at all; reach for a standalone typed constant only when you need to export or reuse the plugin object itself.
+
+`this` is bound via `Function.prototype.apply`, which only rebinds regular
+functions. Use regular method syntax (`method() {}`), not arrow functions,
+for anything that needs `this`.
+
+Plugin-internal bookkeeping, flags, counters, listener sets, lives in the
+factory's closure variables, not `TState`.
 
 ## Lifecycle hooks
 
-`onActivated` runs immediately after the plugin is registered; `onDestroy` runs
-when `store.destroy()` is called:
+`onActivated` runs immediately after the plugin's methods are attached to the
+store; `onDestroy` runs when `store.destroy()` is called, in registration
+order, before the store is marked destroyed:
 
 ```ts
-const store = withPlugins({ count: 0 }).use({
-  onActivated: (store) => {
-    console.log("initial state:", store.get());
+const store = createStore({ count: 0 }).use({
+  onActivated() {
+    console.log("initial state:", this.get());
   },
-  onDestroy: (store) => {
-    console.log("final state:", store.get());
+  onDestroy() {
+    console.log("final state:", this.get());
+  },
+  increment(amount: number): void {
+    this.merge((s) => ({ count: s.count + amount }));
   },
 });
 ```
 
 <Container type="warning" title="Avoid patching the store object">
 
-`onActivated`, `onDestroy`, and `methods` all receive the full store API, but
-avoid mutating or monkey-patching the store object itself. Declare capabilities
-through `methods` and `reducers` instead — that keeps plugin contracts explicit
-and collision-detectable.
+Every method and lifecycle hook has full access to the store via `this`, but
+avoid mutating or monkey-patching the store object itself. Declare
+capabilities through named methods instead; that keeps plugin contracts
+explicit and collision-detectable (`.use()` throws if a name is already
+taken).
 
 </Container>
 
-## Dispatching from methods
-
-Use `getPluginDispatch` to call a plugin's own reducers from `methods`,
-regardless of whether the plugin is namespaced:
-
-```ts
-import { getPluginDispatch } from "@kintools/store-core";
-
-methods: (store, { namespace }) => {
-  const dispatch = getPluginDispatch(store, namespace);
-  return {
-    undo(): void { dispatch._restore(previousState); },
-  };
-},
-```
-
 ## Reusable plugin factories
 
-To write a shareable plugin (like the official `persist` and `history`), wrap it
-in a generic factory function. The four type parameters mirror the store's
-accumulated shape at the point the plugin is applied:
+To write a shareable plugin (like the official `persist` and `history`), wrap
+it in a generic factory function. The type parameters mirror the store's
+accumulated shape at the point the plugin is applied. A plain object can't
+itself carry `TState` for inference (it's only visible inside the `ThisType`
+marker, which inference doesn't look through), so the function's declared
+return type includes the `StorePluginFactory` union member purely so `TState`
+infers correctly at the `.use()` call site; the function still just returns a
+plain object.
+
+A plugin can observe every state change from inside `this.subscribe()`, no
+separate middleware concept needed, the way the `logger` factory below does:
 
 ```ts
-import type {
-  NestedMethods,
-  NestedReducers,
-  StorePlugin,
-} from "@kintools/store-core";
+import type { NestedMethods, StorePlugin } from "@kintools/store-core";
 
 type LoggerOptions = { prefix?: string };
 type LoggerMethods = { getLogs(): string[] };
 
 export function logger<
   TState,
-  TStoreReducers extends NestedReducers<TState>,
   TStoreMethods extends NestedMethods,
   TNamespace extends string | undefined,
 >(
   options: LoggerOptions = {},
-): StorePlugin<
-  TState,
-  TStoreReducers,
-  TStoreMethods,
-  TNamespace,
-  {},
-  LoggerMethods
-> {
+): StorePlugin<TState, TStoreMethods, TNamespace, LoggerMethods> {
   const prefix = options.prefix ?? "→";
   const logs: string[] = [];
 
   return {
-    middleware: () => (ctx, next) => {
-      const entry = `${prefix} ${String(ctx.reducer.name)}`;
-      logs.push(entry);
-      console.log(entry, ctx.reducer.args);
-      return next();
+    onActivated() {
+      this.subscribe((prevState) => {
+        const entry = `${prefix} ${JSON.stringify(prevState)} -> ${
+          JSON.stringify(this.get())
+        }`;
+        logs.push(entry);
+        console.log(entry);
+      });
     },
-    methods: () => ({
-      getLogs: () => [...logs],
-    }),
-  };
-}
-```
-
-## Naming a plugin's own store type
-
-`methods`, `onActivated`, and `onDestroy` each receive `store` already typed
-with this plugin's own reducers merged in (and, outside of `methods`, its own
-methods too, see [Dispatching from methods](#dispatching-from-methods) for why
-`methods` can't see its own plugin's methods). Inline callbacks get this for
-free from `StorePlugin`'s own signatures. If you factor logic out into a
-standalone helper function instead, name that store type with `PluginStore`
-rather than reconstructing it from `StoreWithPlugins` yourself:
-
-```ts
-import type {
-  NestedMethods,
-  NestedReducers,
-  PluginStore,
-  StorePlugin,
-} from "@kintools/store-core";
-
-type CounterReducers<TState> = { bump: (state: TState) => TState };
-
-function logAndBump<
-  TState,
-  TStoreReducers extends NestedReducers<TState>,
-  TStoreMethods extends NestedMethods,
-  TNamespace extends string | undefined,
->(
-  store: PluginStore<
-    TState,
-    TStoreReducers,
-    TStoreMethods,
-    TNamespace,
-    CounterReducers<TState>
-  >,
-): void {
-  console.log("state before bump:", store.get());
-  store.dispatch.bump();
-}
-
-export function counter<
-  TState,
-  TStoreReducers extends NestedReducers<TState>,
-  TStoreMethods extends NestedMethods,
-  TNamespace extends string | undefined,
->(): StorePlugin<
-  TState,
-  TStoreReducers,
-  TStoreMethods,
-  TNamespace,
-  CounterReducers<TState>
-> {
-  return {
-    reducers: { bump: (state) => state },
-    methods: (store) => ({ logAndBump: () => logAndBump(store) }),
+    getLogs: () => [...logs],
   };
 }
 ```
 
 ## Constraining which stores a plugin can target
 
-Tighten `TStoreMethods` or `TStoreReducers` to require certain plugins to be
-registered first. TypeScript will error if the dependency is missing:
+Tighten `TStoreMethods` to require certain plugins to be registered first.
+TypeScript errors if the dependency is missing. This only works if the plugin
+contributes at least one real (non-optional) method: `PluginBody`'s
+`ThisType` marker carries no structural members of its own, so a plugin with
+*only* `onActivated`/`onDestroy` (both optional) is trivially compatible with
+any store regardless of `TStoreMethods`, there's nothing required for
+TypeScript to check. A real method gives it something to check:
 
 ```ts
 // Requires a `history` plugin to already be registered.
 export function undoOnEscape<
   TState,
-  TStoreReducers extends NestedReducers<TState>,
   TStoreMethods extends NestedMethods & { history: { undo(): boolean } },
   TNamespace extends string | undefined,
->(): StorePlugin<TState, TStoreReducers, TStoreMethods, TNamespace> {
+>(): StorePlugin<TState, TStoreMethods, TNamespace, { armEscapeHandler(): void }> {
   return {
-    onActivated(store) {
+    armEscapeHandler() {
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") store.history.undo();
+        if (e.key === "Escape") this.history.undo();
       });
     },
   };
 }
 
-const store = withPlugins({ count: 0 })
+const store = createStore({ count: 0 })
   .use("history", history())
-  .use(undoOnEscape()); // ✓ — history is present
+  .use(undoOnEscape()); // OK: history is present
+store.armEscapeHandler();
 
-withPlugins({ count: 0 }).use(undoOnEscape()); // ✗ — type error: history not registered
+createStore({ count: 0 }).use(undoOnEscape()); // type error: history not registered
 ```

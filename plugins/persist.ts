@@ -1,11 +1,4 @@
-import {
-  getPluginDispatch,
-  type InferActions,
-  type NestedMethods,
-  type NestedReducers,
-  type PluginStore,
-  type StorePlugin,
-} from "@kintools/store-core";
+import type { NestedMethods, Store, StorePlugin } from "@kintools/store-core";
 
 type PromiseOr<T> = Promise<T> | T;
 
@@ -14,7 +7,7 @@ type PromiseOr<T> = Promise<T> | T;
  *
  * The interface intentionally mirrors the Web Storage API (`localStorage`,
  * `sessionStorage`) so those can be used directly. Any storage that
- * satisfies this contract — including async ones (e.g. IndexedDB wrappers) —
+ * satisfies this contract, including async ones (e.g. IndexedDB wrappers),
  * is accepted.
  *
  * @example Using a custom async storage
@@ -84,11 +77,15 @@ export type PersistOptions<TState, TSlice = TState> = {
 
   /**
    * Merges the hydrated slice back into the current state. Called after a
-   * successful storage read, before dispatching the restored state.
+   * successful storage read, before applying the restored state.
    *
    * Defaults to a shallow merge (`{ ...current, ...slice }`), which works
    * correctly when {@linkcode PersistOptions.selector selector} returns a
-   * partial object.
+   * partial object. When the current state is an array, the default instead
+   * replaces it outright with `slice`: object-spreading an array produces a
+   * plain object with numeric keys, not an array, which would silently break
+   * any array state. Pass a custom `merge` (e.g. `(current, slice) =>
+   * [...current, ...slice]`) if array state needs different merge semantics.
    *
    * @param current The store's live state at the moment of hydration.
    * @param slice The value read from storage (after migration, if any).
@@ -143,11 +140,6 @@ export type PersistOptions<TState, TSlice = TState> = {
   skipHydration?: boolean;
 };
 
-type PersistReducers<TState> = {
-  /** @internal Restore a previously persisted state through the dispatch pipeline. */
-  _restore: (state: TState, savedState: TState) => TState;
-};
-
 type PersistMethods<TState> = {
   /**
    * Returns a promise that settles once the current or most recent hydration
@@ -174,7 +166,7 @@ type PersistMethods<TState> = {
   /**
    * Triggers a fresh read from storage and applies the result to the store.
    * If a hydration is already in progress, returns its promise instead of
-   * starting a new one — concurrent callers share the same read.
+   * starting a new one: concurrent callers share the same read.
    *
    * Required when {@linkcode PersistOptions.skipHydration} is `true`.
    */
@@ -209,30 +201,29 @@ type PersistMethods<TState> = {
  * Creates a plugin that persists and hydrates the store state using a storage backend.
  *
  * On activation, the plugin reads any previously stored value, merges it with
- * the current state, and dispatches it through the pipeline via an internal
- * `_restore` reducer so middlewares can observe the hydration. It then
- * subscribes to the store and writes every state change to storage.
+ * the current state, and applies it via `store.set()`. It then subscribes to
+ * the store and writes every state change to storage.
  *
  * @param options Persistence options.
  * The namespace is provided automatically via `store.use(namespace, persist(options))`.
  *
  * @example Persist entire state with localStorage (default)
  * ```ts
- * const store = withPlugins({ count: 0 })
+ * const store = createStore({ count: 0 })
  *   .use({
- *     reducers: {
- *       increment: (state, n: number) => ({ ...state, count: state.count + n }),
+ *     increment(n: number): void {
+ *       this.merge((s) => ({ count: s.count + n }));
  *     },
  *   })
  *   .use("persist", persist({ key: "my-counter" }));
  *
- * store.dispatch.increment(1);
+ * store.increment(1);
  * await store.persist.clear();
  * ```
  *
  * @example Persist a slice of state
  * ```ts
- * const store = withPlugins({ token: "", theme: "light", count: 0 })
+ * const store = createStore({ token: "", theme: "light", count: 0 })
  *   .use("persist", persist({
  *     key: "app",
  *     selector: (s) => ({ token: s.token }),
@@ -242,7 +233,7 @@ type PersistMethods<TState> = {
  *
  * @example Schema versioning with migration
  * ```ts
- * const store = withPlugins({ items: [] as Item[] })
+ * const store = createStore({ items: [] as Item[] })
  *   .use("persist", persist({
  *     key: "items",
  *     version: 1,
@@ -253,9 +244,9 @@ type PersistMethods<TState> = {
  *   }));
  * ```
  *
- * @example SSR — skip auto-hydration and trigger manually
+ * @example SSR: skip auto-hydration and trigger manually
  * ```ts
- * const store = withPlugins({ user: null })
+ * const store = createStore({ user: null })
  *   .use("persist", persist({ key: "user", skipHydration: true }));
  *
  * // Later, on the client:
@@ -263,7 +254,6 @@ type PersistMethods<TState> = {
  * ```
  *
  * @template TState The store's state type.
- * @template TStoreReducers Reducers already on the store before this plugin is applied.
  * @template TStoreMethods Methods already on the store before this plugin is applied.
  * @template TNamespace The namespace passed to `store.use(namespace, persist(...))`,
  * or `undefined` for top-level. Inferred automatically.
@@ -271,25 +261,20 @@ type PersistMethods<TState> = {
  */
 export function persist<
   TState,
-  TStoreReducers extends NestedReducers<TState>,
   TStoreMethods extends NestedMethods,
   TNamespace extends string | undefined,
   TSlice = TState,
 >(
   options: PersistOptions<TState, TSlice>,
-): StorePlugin<
-  TState,
-  TStoreReducers,
-  TStoreMethods,
-  TNamespace,
-  PersistReducers<TState>,
-  PersistMethods<TState>
-> {
+): StorePlugin<TState, TStoreMethods, TNamespace, PersistMethods<TState>> {
   const {
     key,
     storage,
     selector = (s: TState) => s as unknown as TSlice,
-    merge = (current: TState, slice: TSlice) => ({ ...current, ...slice }),
+    merge = (current: TState, slice: TSlice) =>
+      Array.isArray(current)
+        ? (slice as unknown as TState)
+        : ({ ...current, ...slice } as TState),
     version: targetVersion = 0,
     migrate,
     encode = JSON.stringify,
@@ -303,14 +288,6 @@ export function persist<
   function getStorage(): PersistStorage {
     return storage ?? localStorage;
   }
-
-  type TStore = PluginStore<
-    TState,
-    TStoreReducers,
-    TStoreMethods,
-    TNamespace,
-    PersistReducers<TState>
-  >;
 
   let _hasHydrated = false;
   let _hydrating = false;
@@ -328,10 +305,7 @@ export function persist<
   const onHydrationStartListeners = new Set<(state: TState) => void>();
   const onHydrationCompleteListeners = new Set<(state: TState) => void>();
 
-  async function _hydrate(
-    store: TStore,
-    dispatch: InferActions<TState, PersistReducers<TState>>,
-  ): Promise<void> {
+  async function _hydrate(store: Store<TState, TStoreMethods>): Promise<void> {
     onHydrationStartListeners.forEach((cb) => cb(store.get()));
 
     try {
@@ -344,7 +318,7 @@ export function persist<
         try {
           storedValue = decode(raw);
         } catch {
-          // Corrupted storage value — skip restore.
+          // Corrupted storage value, skip restore.
         }
 
         let slice: TSlice | undefined;
@@ -357,7 +331,7 @@ export function persist<
           }
 
           if (slice !== undefined) {
-            dispatch._restore(merge(store.get(), slice));
+            store.set(merge(store.get(), slice));
           }
         }
       }
@@ -372,10 +346,7 @@ export function persist<
     }
   }
 
-  function startHydration(
-    store: TStore,
-    dispatch: InferActions<TState, PersistReducers<TState>>,
-  ): Promise<void> {
+  function startHydration(store: Store<TState, TStoreMethods>): Promise<void> {
     if (!_hydrating) {
       // Fresh attempt: a new promise so hydrationComplete() tracks this
       // round instead of the previous one's already-settled outcome.
@@ -384,7 +355,7 @@ export function persist<
         rejectActive = rej;
       });
       _hydrating = true;
-      _hydrate(store, dispatch).finally(() => {
+      _hydrate(store).finally(() => {
         _hydrating = false;
       });
     }
@@ -392,53 +363,51 @@ export function persist<
   }
 
   return {
-    reducers: {
-      _restore: (_state, savedState: TState) => savedState,
-    },
-
-    methods: (store, { namespace }) => {
-      const dispatch = getPluginDispatch(store, namespace);
-
-      return {
-        clear: () => getStorage().removeItem(key),
-        hasHydrated: () => _hasHydrated,
-        hydrate: () => startHydration(store, dispatch),
-        hydrationComplete: () => activeHydration,
-        onHydrationStart: (cb: (state: TState) => void) => {
-          onHydrationStartListeners.add(cb);
-          return () => onHydrationStartListeners.delete(cb);
-        },
-        onHydrationComplete: (cb: (state: TState) => void) => {
-          onHydrationCompleteListeners.add(cb);
-          return () => onHydrationCompleteListeners.delete(cb);
-        },
-      };
-    },
-
-    async onActivated(store, { namespace }) {
-      const dispatch = getPluginDispatch(store, namespace);
-
+    async onActivated() {
       if (!skipHydration) {
         try {
-          await startHydration(store, dispatch);
+          // `this`'s type has more methods than TStoreMethods (this plugin's
+          // own), which TS can't prove is still assignable through the
+          // generic Store<TState, TStoreMethods> alias; safe in practice,
+          // since startHydration only reads get/set, present regardless.
+          await startHydration(this as Store<TState, TStoreMethods>);
         } catch {
           // Failures surface through hasHydrated()/hydrationComplete();
-          // swallow here so they don't become an unhandled rejection from
-          // onActivated, which with-plugins.ts calls without awaiting or
-          // attaching a catch.
+          // swallow here so they don't become an unhandled rejection.
+          // onActivated is called without awaiting or attaching a catch.
         }
       }
 
-      store.subscribe((get) => {
+      this.subscribe(() => {
         try {
           getStorage().setItem(
             key,
-            encode({ value: selector(get()), version: targetVersion }),
+            encode({ value: selector(this.get()), version: targetVersion }),
           );
         } catch {
           // Storage errors must not crash the app.
         }
       });
+    },
+    clear() {
+      return getStorage().removeItem(key);
+    },
+    hasHydrated() {
+      return _hasHydrated;
+    },
+    hydrate() {
+      return startHydration(this as Store<TState, TStoreMethods>);
+    },
+    hydrationComplete() {
+      return activeHydration;
+    },
+    onHydrationStart(cb: (state: TState) => void) {
+      onHydrationStartListeners.add(cb);
+      return () => onHydrationStartListeners.delete(cb);
+    },
+    onHydrationComplete(cb: (state: TState) => void) {
+      onHydrationCompleteListeners.add(cb);
+      return () => onHydrationCompleteListeners.delete(cb);
     },
   };
 }

@@ -1,7 +1,6 @@
 import { assertEquals } from "@std/assert";
-import { withPlugins } from "@kintools/store-core";
+import { createStore } from "@kintools/store-core";
 import { devtools } from "./devtools.ts";
-import type {} from "./devtools.ts";
 
 type Action = { type: string; [key: string]: unknown };
 type Msg =
@@ -71,11 +70,10 @@ function setup() {
   // deno-lint-ignore no-explicit-any
   (globalThis as any).__REDUX_DEVTOOLS_EXTENSION__ = fake.ext;
 
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use({
-      reducers: {
-        increment: (s, n: number) => ({ count: s.count + n }),
-        set: (_, n: number) => ({ count: n }),
+      increment(n: number): void {
+        this.merge((s) => ({ count: s.count + n }));
       },
     })
     .use("devtools", devtools());
@@ -94,17 +92,24 @@ Deno.test("devtools - init called with initial state on activation", () => {
   teardown();
 });
 
-Deno.test("devtools - send called with action name and next state after dispatch", () => {
+Deno.test("devtools - send called with @@CHANGE and the new state after calling a method", () => {
   const { store, sends } = setup();
-  store.dispatch.increment(5);
-  assertEquals(sends[0], [{ type: "increment", payload: [5] }, { count: 5 }]);
+  store.increment(5);
+  assertEquals(sends, [[{ type: "@@CHANGE" }, { count: 5 }]]);
   teardown();
 });
 
-Deno.test("devtools - send called with @@SET after store.set()", () => {
+Deno.test("devtools - send called with @@CHANGE and the new state after store.set()", () => {
   const { store, sends } = setup();
   store.set({ count: 42 });
-  assertEquals(sends[0], [{ type: "@@SET" }, { count: 42 }]);
+  assertEquals(sends, [[{ type: "@@CHANGE" }, { count: 42 }]]);
+  teardown();
+});
+
+Deno.test("devtools - send called with @@CHANGE and the new state after store.merge()", () => {
+  const { store, sends } = setup();
+  store.merge({ count: 42 });
+  assertEquals(sends, [[{ type: "@@CHANGE" }, { count: 42 }]]);
   teardown();
 });
 
@@ -130,7 +135,7 @@ Deno.test("devtools - JUMP_TO_ACTION behaves like JUMP_TO_STATE", () => {
 
 Deno.test("devtools - RESET restores initial state", () => {
   const { store, simulate } = setup();
-  store.dispatch.increment(10);
+  store.increment(10);
   simulate({ type: "DISPATCH", state: "", payload: { type: "RESET" } });
   assertEquals(store.get(), { count: 0 });
   teardown();
@@ -138,7 +143,7 @@ Deno.test("devtools - RESET restores initial state", () => {
 
 Deno.test("devtools - RESET calls connection.init with initial state", () => {
   const { store, simulate, inits } = setup();
-  store.dispatch.increment(10);
+  store.increment(10);
   simulate({ type: "DISPATCH", state: "", payload: { type: "RESET" } });
   assertEquals(inits.at(-1), { count: 0 });
   teardown();
@@ -146,7 +151,7 @@ Deno.test("devtools - RESET calls connection.init with initial state", () => {
 
 Deno.test("devtools - COMMIT advances the committed baseline", () => {
   const { store, simulate, inits } = setup();
-  store.dispatch.increment(5);
+  store.increment(5);
   simulate({ type: "DISPATCH", state: "", payload: { type: "COMMIT" } });
   assertEquals(inits.at(-1), { count: 5 });
   teardown();
@@ -154,9 +159,9 @@ Deno.test("devtools - COMMIT advances the committed baseline", () => {
 
 Deno.test("devtools - ROLLBACK restores last committed state", () => {
   const { store, simulate } = setup();
-  store.dispatch.increment(5);
+  store.increment(5);
   simulate({ type: "DISPATCH", state: "", payload: { type: "COMMIT" } });
-  store.dispatch.increment(5); // count = 10
+  store.increment(5); // count = 10
   simulate({ type: "DISPATCH", state: "", payload: { type: "ROLLBACK" } });
   assertEquals(store.get(), { count: 5 });
   teardown();
@@ -164,9 +169,9 @@ Deno.test("devtools - ROLLBACK restores last committed state", () => {
 
 Deno.test("devtools - RESET after COMMIT goes back to initial, not committed", () => {
   const { store, simulate } = setup();
-  store.dispatch.increment(5);
+  store.increment(5);
   simulate({ type: "DISPATCH", state: "", payload: { type: "COMMIT" } });
-  store.dispatch.increment(5); // count = 10
+  store.increment(5); // count = 10
   simulate({ type: "DISPATCH", state: "", payload: { type: "RESET" } });
   assertEquals(store.get(), { count: 0 });
   teardown();
@@ -200,11 +205,13 @@ Deno.test("devtools - unsubscribe called on store destroy", () => {
 
 Deno.test("devtools - no-op when extension is absent", () => {
   teardown(); // ensure extension is not set
-  const store = withPlugins({ count: 0 })
+  const store = createStore({ count: 0 })
     .use({
-      reducers: { increment: (s, n: number) => ({ count: s.count + n }) },
+      increment(n: number): void {
+        this.merge((s) => ({ count: s.count + n }));
+      },
     })
     .use("devtools", devtools());
-  store.dispatch.increment(1);
+  store.increment(1);
   assertEquals(store.get(), { count: 1 });
 });

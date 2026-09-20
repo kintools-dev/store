@@ -64,7 +64,6 @@ function virtualEntry(name: string, code: string): Entry {
 
 const entries: Entry[] = [
   { name: "createStore", input: coreEntry("create-store.ts") },
-  { name: "withPlugins", input: coreEntry("with-plugins.ts") },
   { name: "derive", input: coreEntry("derive.ts") },
   {
     name: "@kintools/store-react (bindings only)",

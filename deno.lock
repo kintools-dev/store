@@ -12,27 +12,27 @@
     "jsr:@std/path@^1.1.5": "1.1.5",
     "jsr:@ts-morph/bootstrap@0.29": "0.29.0",
     "jsr:@ts-morph/common@0.29": "0.29.0",
-    "npm:@deno/vite-plugin@*": "2.0.2_vite@8.0.16__@types+node@22.19.20_@types+node@22.19.20",
-    "npm:@reduxjs/toolkit@2": "2.12.0_react@19.2.7_react-redux@9.3.0__@types+react@19.2.17__react@19.2.7__redux@5.0.1_@types+react@19.2.17",
+    "npm:@deno/vite-plugin@*": "2.0.2_vite@8.0.16_@types+node@22.19.20",
+    "npm:@reduxjs/toolkit@2": "2.12.0_react@19.2.7_react-redux@9.3.0_@types+react@19.2.17",
     "npm:@tailwindcss/postcss@4": "4.3.1",
-    "npm:@tailwindcss/vite@^4.3.1": "4.3.1_vite@8.0.16__@types+node@22.19.20_@types+node@22.19.20",
+    "npm:@tailwindcss/vite@^4.3.1": "4.3.1_vite@8.0.16_@types+node@22.19.20",
     "npm:@tanstack/react-query@^5.101.2": "5.101.2_react@19.2.7",
-    "npm:@testing-library/react@^16.3.0": "16.3.2_@testing-library+dom@10.4.1_@types+react@19.2.17_@types+react-dom@19.2.3__@types+react@19.2.17_react@19.2.7_react-dom@19.2.7__react@19.2.7",
+    "npm:@testing-library/react@^16.3.0": "16.3.2_@testing-library+dom@10.4.1_@types+react@19.2.17_@types+react-dom@19.2.3_react@19.2.7_react-dom@19.2.7",
     "npm:@types/node@22": "22.19.20",
     "npm:@types/react-dom@*": "19.2.3_@types+react@19.2.17",
     "npm:@types/react-dom@19": "19.2.3_@types+react@19.2.17",
     "npm:@types/react@*": "19.2.17",
     "npm:@types/react@19": "19.2.17",
     "npm:@types/react@^19.2.17": "19.2.17",
-    "npm:@vitejs/plugin-react@*": "6.0.2_vite@8.0.16__@types+node@22.19.20_@types+node@22.19.20",
+    "npm:@vitejs/plugin-react@*": "6.0.2_vite@8.0.16_@types+node@22.19.20",
     "npm:happy-dom@^20.10.6": "20.10.6",
     "npm:immer@11": "11.1.8",
     "npm:immer@^11.1.8": "11.1.8",
-    "npm:jotai-family@1": "1.1.0_jotai@2.20.2__@types+react@19.2.17__react@19.2.7",
+    "npm:jotai-family@1": "1.1.0_jotai@2.20.2",
     "npm:jotai@2": "2.20.2_@types+react@19.2.17_react@19.2.7",
     "npm:mobx-react-lite@5": "5.0.0_mobx@7.0.0_react@19.2.7",
     "npm:mobx@7": "7.0.0",
-    "npm:next@^16.2.9": "16.2.9_react@19.2.7_react-dom@19.2.7__react@19.2.7",
+    "npm:next@^16.2.9": "16.2.9_react@19.2.7_react-dom@19.2.7",
     "npm:react-dom@*": "19.2.7_react@19.2.7",
     "npm:react-dom@19": "19.2.7_react@19.2.7",
     "npm:react-dom@^19.2.7": "19.2.7_react@19.2.7",
@@ -118,7 +118,7 @@
     "@babel/runtime@7.29.7": {
       "integrity": "sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw=="
     },
-    "@deno/vite-plugin@2.0.2_vite@8.0.16__@types+node@22.19.20_@types+node@22.19.20": {
+    "@deno/vite-plugin@2.0.2_vite@8.0.16_@types+node@22.19.20": {
       "integrity": "sha512-bzuKApn9Jr2x1jSrbuJEJzy++8LUwjFVOAopAbepcE3RgYzdcPEWd36PSp7P5dNMQlNnQlgtm3MeNbcKZ/Eh/Q==",
       "dependencies": [
         "@deno/loader@npm:@jsr/deno__loader@0.5.0",
@@ -410,7 +410,7 @@
     "@oxc-project/types@0.133.0": {
       "integrity": "sha512-KzkdCd6Uxqnf6l3HOw1xfatAlUURA0g14cvBYFyJ5SaNOQbOUvBr9PKArcPcrNIeRsBdgcUzOGrhKveVpvOIGA=="
     },
-    "@reduxjs/toolkit@2.12.0_react@19.2.7_react-redux@9.3.0__@types+react@19.2.17__react@19.2.7__redux@5.0.1_@types+react@19.2.17": {
+    "@reduxjs/toolkit@2.12.0_react@19.2.7_react-redux@9.3.0_@types+react@19.2.17": {
       "integrity": "sha512-KiT+RzZbp6mQET+Mg+h2c97+9j1sNflUxQkIHI7Yuzf6Peu+OYpmkn6nbHWmLLWj+1ZODUJFwGZ7gx3L9R9EOw==",
       "dependencies": [
         "@standard-schema/spec",
@@ -619,7 +619,7 @@
         "tailwindcss"
       ]
     },
-    "@tailwindcss/vite@4.3.1_vite@8.0.16__@types+node@22.19.20_@types+node@22.19.20": {
+    "@tailwindcss/vite@4.3.1_vite@8.0.16_@types+node@22.19.20": {
       "integrity": "sha512-hItDHuIIlEV61R+faXu66s1K36aTurO/Qw0e45Vskz57gXl9pWOT6eg3zmcEui6CZXddbN7zd41bwmvag4JGwQ==",
       "dependencies": [
         "@tailwindcss/node",
@@ -651,7 +651,7 @@
         "pretty-format"
       ]
     },
-    "@testing-library/react@16.3.2_@testing-library+dom@10.4.1_@types+react@19.2.17_@types+react-dom@19.2.3__@types+react@19.2.17_react@19.2.7_react-dom@19.2.7__react@19.2.7": {
+    "@testing-library/react@16.3.2_@testing-library+dom@10.4.1_@types+react@19.2.17_@types+react-dom@19.2.3_react@19.2.7_react-dom@19.2.7": {
       "integrity": "sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g==",
       "dependencies": [
         "@babel/runtime",
@@ -705,7 +705,7 @@
         "@types/node"
       ]
     },
-    "@vitejs/plugin-react@6.0.2_vite@8.0.16__@types+node@22.19.20_@types+node@22.19.20": {
+    "@vitejs/plugin-react@6.0.2_vite@8.0.16_@types+node@22.19.20": {
       "integrity": "sha512-DlSMqo4WhThw4vB8Mpn0Woe9J+Jfq1geJ61AKW0QEgLzGMNwtIMdxbDUzLxcun8W7NbJO0e2Jg/Nxm3cCSVzzg==",
       "dependencies": [
         "@rolldown/pluginutils",
@@ -798,7 +798,7 @@
       "integrity": "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==",
       "bin": true
     },
-    "jotai-family@1.1.0_jotai@2.20.2__@types+react@19.2.17__react@19.2.7": {
+    "jotai-family@1.1.0_jotai@2.20.2": {
       "integrity": "sha512-T1ACRsLnN5Mu0B8/DIWUW1hW7x1RmpBprm/+CWmUTf4ZZUmIFEQpBJ9PNQtXPjdUD2uu8RvwBxr7nJPdCw5BXg==",
       "dependencies": [
         "jotai"
@@ -916,7 +916,7 @@
       "integrity": "sha512-sPdqC6ByMVVGvF1ynvvMo0/o+oD1VX7DaHhijt1bFgjvBkHBib4t49GoNDhf2NDta4oeUNlaGbSt5K7qjZ955Q==",
       "bin": true
     },
-    "next@16.2.9_react@19.2.7_react-dom@19.2.7__react@19.2.7": {
+    "next@16.2.9_react@19.2.7_react-dom@19.2.7": {
       "integrity": "sha512-MEOJiq/UvuezAdqVSceHbqDgZt1kDw2tpGVOlsdIoJsQdbN2JY2hpVG4xnXGkbdJUOEWhnRfiu/O4Hpc9Juwww==",
       "dependencies": [
         "@next/env",
@@ -1159,7 +1159,7 @@
       "jsr:@std/assert@^1.0.19"
     ],
     "members": {
-      "examples/checkout-jotai-style-react-query": {
+      "examples/checkout-minimal-style-react-query": {
         "dependencies": [
           "npm:@deno/vite-plugin@*",
           "npm:@tailwindcss/vite@^4.3.1",
@@ -1173,7 +1173,7 @@
           "npm:vite@*"
         ]
       },
-      "examples/checkout-redux-style-react-query": {
+      "examples/checkout-structured-style-react-query": {
         "dependencies": [
           "npm:@deno/vite-plugin@*",
           "npm:@tailwindcss/vite@^4.3.1",
@@ -1200,7 +1200,7 @@
           "npm:vite@*"
         ]
       },
-      "examples/todo-redux-style": {
+      "examples/todo-structured-style": {
         "dependencies": [
           "npm:@deno/vite-plugin@*",
           "npm:@tailwindcss/vite@^4.3.1",
@@ -1213,7 +1213,7 @@
           "npm:vite@*"
         ]
       },
-      "examples/todo-redux-style-nextjs": {
+      "examples/todo-structured-style-nextjs": {
         "packageJson": {
           "dependencies": [
             "npm:@tailwindcss/postcss@4",
@@ -1228,19 +1228,6 @@
             "npm:typescript@^6.0.3"
           ]
         }
-      },
-      "examples/todo-zustand-style": {
-        "dependencies": [
-          "npm:@deno/vite-plugin@*",
-          "npm:@tailwindcss/vite@^4.3.1",
-          "npm:@types/react-dom@*",
-          "npm:@types/react@*",
-          "npm:@vitejs/plugin-react@*",
-          "npm:react-dom@*",
-          "npm:react@*",
-          "npm:tailwindcss@^4.3.1",
-          "npm:vite@*"
-        ]
       },
       "plugins": {
         "dependencies": [
