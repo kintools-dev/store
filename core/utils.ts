@@ -1,6 +1,20 @@
 import type { Listener, ReadonlyStore } from "./create-store.ts";
 
 /**
+ * Checks whether a value is a plain object with an object or null prototype.
+ *
+ * @param value The value to check.
+ * @returns `true` if `value` is a plain object.
+ */
+export function isPlainObject(
+  value: unknown,
+): value is Record<string, unknown> {
+  if (value == null || typeof value !== "object") return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+/**
  * Compares two values one level deep: primitives (and identical references)
  * via `Object.is`, and arrays/objects by comparing their own enumerable keys
  * with `Object.is`, without recursing into nested values.

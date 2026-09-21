@@ -44,12 +44,14 @@ store.set((s) => ({ ...s, todos: [...s.todos, "new item"] }));
 
 ### `merge(partial)`
 
-Shallow-merges an object into the current state. Behaves like
-`set((s) => ({ ...s, ...partial }))`, or `set((s) => ({ ...s, ...partial(s) }))`
-when given a function. Always notifies, even if no value changed.
+Shallow-merges a partial object into plain-object state.
 
-Meant for object-shaped state; merging into a primitive or array store isn't
-meaningful.
+Behaves like `set((s) => ({ ...s, ...partial }))`, or
+`set((s) => ({ ...s, ...partial(s) }))` when given a function.
+
+Plain-object state always notifies because the merge creates a new object. For
+other state values, `partial` replaces the current state, and subscribers are
+notified only when the two values are not the same by `Object.is`.
 
 ```ts
 const store = createStore({ count: 0, name: "a" });

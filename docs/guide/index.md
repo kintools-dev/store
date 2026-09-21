@@ -24,13 +24,6 @@ through a proxy or a full reactive graph either.
 No hidden merges beyond what `merge` itself does, no auto-propagating destroy,
 no magic dependency graphs. If something happens, you triggered it.
 
-- `set` replaces the entire state
-- `merge(partial)` behaves like `set((s) => ({ ...s, ...partial }))` or
-  `set((s) => ({ ...s, ...partial(s) }))`
-- `destroy` must be called manually, nothing propagates to dependent stores
-  automatically
-- `derive` tracks only the stores you explicitly read with `get(store)`
-
 ## Type safety by default
 
 Every method argument is fully inferred, no `any` or `unknown`, no manual

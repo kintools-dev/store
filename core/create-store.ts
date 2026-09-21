@@ -1,6 +1,7 @@
 // deno-lint-ignore-file no-explicit-any ban-types
 import { throwError } from "./_internals.ts";
 import type { Methods, NestedMethods } from "./_types.ts";
+import { isPlainObject } from "./utils.ts";
 
 export type { Methods, NestedMethods };
 
@@ -431,14 +432,11 @@ export function createStore<TState>(initialState: TState): Store<TState> {
     return state;
   }
 
-  function set(next: TState | Updater<TState>): void {
-    checkDestroyed();
+  function commitAction(nextState: TState): void {
+    if (Object.is(nextState, state)) return;
 
     const prevState = state;
-    state = typeof next === "function"
-      ? (next as Updater<TState>)(prevState)
-      : next;
-    if (Object.is(state, prevState)) return;
+    state = nextState;
 
     const wasNotifying = isNotifying;
     isNotifying = true;
@@ -451,13 +449,21 @@ export function createStore<TState>(initialState: TState): Store<TState> {
     }
   }
 
+  function set(next: TState | Updater<TState>): void {
+    checkDestroyed();
+
+    const nextState = typeof next === "function"
+      ? (next as Updater<TState>)(state)
+      : next;
+    commitAction(nextState);
+  }
+
   function merge(
     partial: Partial<TState> | ((state: TState) => Partial<TState>),
   ): void {
     checkDestroyed();
-    const current = state;
-    const p = typeof partial === "function" ? partial(current) : partial;
-    set({ ...current, ...p });
+    const p = typeof partial === "function" ? partial(state) : partial;
+    commitAction(isPlainObject(state) ? { ...state, ...p } : p as TState);
   }
 
   function subscribe(listener: Listener<TState, Store<TState>>): VoidFunction {

@@ -147,6 +147,37 @@ Deno.test("merge - notifies listeners", () => {
   assertEquals(calls, 1);
 });
 
+Deno.test("merge - notifies for object state even when partial is the same", () => {
+  const store = createStore({ count: 0 });
+  let calls = 0;
+  store.subscribe(() => calls++);
+  const partial = store.get();
+
+  store.merge(partial);
+
+  assertEquals(calls, 1);
+});
+
+Deno.test("merge - skips equal non-object state", () => {
+  const store = createStore(1);
+  let calls = 0;
+  store.subscribe(() => calls++);
+
+  store.merge(1);
+
+  assertEquals(calls, 0);
+});
+
+Deno.test("merge - notifies for different non-object state", () => {
+  const store = createStore(1);
+  let calls = 0;
+  store.subscribe(() => calls++);
+
+  store.merge(2);
+
+  assertEquals(calls, 1);
+});
+
 Deno.test("subscribe - a regular function listener reads the store via this", () => {
   const store = createStore({ count: 0 }).use({
     increment(n: number): void {
