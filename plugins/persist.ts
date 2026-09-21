@@ -1,4 +1,9 @@
-import type { NestedMethods, Store, StorePlugin } from "@kintools/store-core";
+import {
+  isPlainObject,
+  type NestedMethods,
+  type Store,
+  type StorePlugin,
+} from "@kintools/store-core";
 
 type PromiseOr<T> = Promise<T> | T;
 
@@ -272,9 +277,9 @@ export function persist<
     storage,
     selector = (s: TState) => s as unknown as TSlice,
     merge = (current: TState, slice: TSlice) =>
-      Array.isArray(current)
-        ? (slice as unknown as TState)
-        : ({ ...current, ...slice } as TState),
+      isPlainObject(current)
+        ? ({ ...current, ...slice } as TState)
+        : (slice as unknown as TState),
     version: targetVersion = 0,
     migrate,
     encode = JSON.stringify,
