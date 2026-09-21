@@ -136,7 +136,7 @@ export function App() {
         <TodoList />
       </div>
       <p className="mt-6 text-center text-slate-400 text-sm">
-        Kin Store example: structured style · createStore · immer · persist
+        Kin Store example: structured style · createStore · persist
       </p>
     </div>
   );

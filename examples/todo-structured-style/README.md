@@ -1,9 +1,8 @@
 # Structured Todo: Kin Store
 
-Demonstrates `createStore` with the **immer**, **persist**, and **devtools**
-plugins:
+Demonstrates `createStore` with the **persist** and **devtools** plugins:
 
-- `immer`: write methods with mutable draft syntax, called directly as
+- Store methods use native `merge` updates and are called directly as
   `store.addTodo(...)`
 - `persist`: automatically saves state to `localStorage` and restores it on load
 - `devtools`: connects to the Redux DevTools extension so every state change

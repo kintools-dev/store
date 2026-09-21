@@ -1,5 +1,5 @@
 import { createStore } from "@kintools/store-core";
-import { devtools, immer, persist } from "@kintools/store-plugins";
+import { devtools, persist } from "@kintools/store-plugins";
 
 export type Filter = "all" | "active" | "done";
 
@@ -15,33 +15,30 @@ export const todoStore = createStore({
 })
   .use("persist", persist({ key: "todos" }))
   .use(import.meta.env.DEV ? devtools() : {})
-  .use(
-    immer({
-      addTodo(text: string): void {
-        this.set((draft) => {
-          draft.items.push({ id: Date.now(), text, done: false });
-        });
-      },
-      toggleTodo(id: number): void {
-        this.set((draft) => {
-          const item = draft.items.find((it) => it.id === id);
-          if (item) item.done = !item.done;
-        });
-      },
-      removeTodo(id: number): void {
-        this.set((draft) => {
-          draft.items = draft.items.filter((it) => it.id !== id);
-        });
-      },
-      clearDone(): void {
-        this.set((draft) => {
-          draft.items = draft.items.filter((it) => !it.done);
-        });
-      },
-      setFilter(filter: Filter): void {
-        this.set((draft) => {
-          draft.filter = filter;
-        });
-      },
-    }),
-  );
+  .use({
+    addTodo(text: string): void {
+      this.merge((state) => ({
+        items: [...state.items, { id: Date.now(), text, done: false }],
+      }));
+    },
+    toggleTodo(id: number): void {
+      this.merge((state) => ({
+        items: state.items.map((item) =>
+          item.id === id ? { ...item, done: !item.done } : item,
+        ),
+      }));
+    },
+    removeTodo(id: number): void {
+      this.merge((state) => ({
+        items: state.items.filter((item) => item.id !== id),
+      }));
+    },
+    clearDone(): void {
+      this.merge((state) => ({
+        items: state.items.filter((item) => !item.done),
+      }));
+    },
+    setFilter(filter: Filter): void {
+      this.merge({ filter });
+    },
+  });

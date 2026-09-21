@@ -2,8 +2,7 @@
 
 Demonstrates Kin Store in a Next.js (App Router) application with SSR:
 
-- `createStore` with **immer** (draft mutations) and **persist**
-  (localStorage)
+- `createStore` with **persist** (localStorage)
 - `createTodoStore` factory: each client render gets its own store instance,
   avoiding shared state across SSR requests
 - `StoreProvider`: injects the store into the React component tree via context
