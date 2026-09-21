@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2
+
+- Fix `persist`'s default merge for non-object state: it now replaces the
+  state with the hydrated slice instead of spreading it into an object.
+
 ## 0.5.1
 
 - Slim the README to install, one usage example, and a docs link. It now

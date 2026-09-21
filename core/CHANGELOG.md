@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2
+
+- Fix `merge` for non-object state: it now replaces the state with the partial
+  value instead of spreading it into an object, and skips notification when
+  the values are identical by `Object.is`.
+- Add and use `isPlainObject` to distinguish object merge semantics.
+
 ## 0.4.1
 
 - Slim the README to install, one usage example, and a docs link.

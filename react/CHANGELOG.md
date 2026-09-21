@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2
+
+- Bump version to pick up `@kintools/store-core` 0.4.2. No React binding API
+  changes.
+
 ## 0.4.1
 
 - Slim the README to install, one usage example, and a docs link.
